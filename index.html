@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MySQL 数据库查看器</title>
   <style>
-    /* 保留原有样式，无需修改 */
     * {
       margin: 0;
       padding: 0;
@@ -37,7 +36,7 @@
       width: 100px;
       font-weight: bold;
     }
-    input {
+    input, select {
       padding: 8px 10px;
       width: 300px;
       border: 1px solid #ddd;
@@ -61,12 +60,6 @@
     }
     .table-selector {
       margin-bottom: 20px;
-    }
-    select {
-      padding: 8px 10px;
-      width: 300px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
     }
     .message {
       margin: 15px 0;
@@ -143,11 +136,15 @@
         <label>密码：</label>
         <input type="password" id="password" placeholder="数据库密码">
       </div>
+      <!-- 新增：数据库名下拉框（替代输入框） -->
       <div class="form-group">
         <label>数据库名：</label>
-        <input type="text" id="database" placeholder="要连接的数据库名称">
+        <button id="getDbBtn">获取数据库列表</button>
+        <select id="database" disabled>
+          <option value="">请先获取数据库列表</option>
+        </select>
       </div>
-      <button id="connectBtn">连接数据库</button>
+      <button id="connectBtn" disabled>连接数据库</button>
       <button id="disconnectBtn" disabled>断开连接</button>
       <div id="message" class="message hidden"></div>
     </div>
@@ -171,7 +168,8 @@
     const portInput = document.getElementById('port');
     const userInput = document.getElementById('user');
     const passwordInput = document.getElementById('password');
-    const databaseInput = document.getElementById('database');
+    const databaseSelect = document.getElementById('database');
+    const getDbBtn = document.getElementById('getDbBtn');
     const connectBtn = document.getElementById('connectBtn');
     const disconnectBtn = document.getElementById('disconnectBtn');
     const messageDiv = document.getElementById('message');
@@ -180,7 +178,7 @@
     const queryBtn = document.getElementById('queryBtn');
     const dataContainer = document.getElementById('dataContainer');
 
-    // 排序状态管理（确保全局可用）
+    // 排序状态管理
     let currentSortField = '';
     let currentSortOrder = 'ASC';
 
@@ -190,6 +188,50 @@
       messageDiv.className = `message ${isSuccess ? 'success' : 'error'}`;
     }
 
+    // 新增：获取数据库列表
+    getDbBtn.addEventListener('click', async () => {
+      const params = {
+        host: hostInput.value.trim(),
+        port: portInput.value.trim(),
+        user: userInput.value.trim(),
+        password: passwordInput.value.trim()
+      };
+
+      // 验证基础参数
+      if (!params.host || !params.port || !params.user) {
+        showMessage('请填写主机、端口、用户名', false);
+        return;
+      }
+
+      try {
+        const response = await fetch('http://localhost:3000/get-databases', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(params)
+        });
+        const result = await response.json();
+
+        if (result.success) {
+          showMessage(result.message);
+          // 填充数据库下拉框
+          databaseSelect.innerHTML = '<option value="">请选择数据库</option>';
+          result.databases.forEach(db => {
+            const option = document.createElement('option');
+            option.value = db;
+            option.textContent = db;
+            databaseSelect.appendChild(option);
+          });
+          // 启用下拉框和连接按钮
+          databaseSelect.disabled = false;
+          connectBtn.disabled = false;
+        } else {
+          showMessage(result.message, false);
+        }
+      } catch (error) {
+        showMessage(`请求失败：${error.message}`, false);
+      }
+    });
+
     // 连接数据库
     connectBtn.addEventListener('click', async () => {
       const params = {
@@ -197,11 +239,12 @@
         port: portInput.value.trim(),
         user: userInput.value.trim(),
         password: passwordInput.value.trim(),
-        database: databaseInput.value.trim()
+        database: databaseSelect.value.trim()
       };
 
-      if (!params.host || !params.port || !params.user || !params.database) {
-        showMessage('请填写完整的连接参数', false);
+      // 验证参数
+      if (!params.database) {
+        showMessage('请选择数据库', false);
         return;
       }
 
@@ -215,6 +258,7 @@
 
         if (result.success) {
           showMessage(result.message);
+          // 填充表列表
           tableSelect.innerHTML = '<option value="">请选择表</option>';
           result.tables.forEach(table => {
             const option = document.createElement('option');
@@ -222,10 +266,12 @@
             option.textContent = table;
             tableSelect.appendChild(option);
           });
+          // 更新UI状态
           tableSection.classList.remove('hidden');
           queryBtn.disabled = false;
           connectBtn.disabled = true;
           disconnectBtn.disabled = false;
+          getDbBtn.disabled = true; // 连接后禁止重新获取数据库列表
         } else {
           showMessage(result.message, false);
         }
@@ -244,11 +290,16 @@
         const result = await response.json();
 
         showMessage(result.message);
+        // 重置UI状态
         tableSection.classList.add('hidden');
         dataContainer.innerHTML = '';
         connectBtn.disabled = false;
         disconnectBtn.disabled = true;
         queryBtn.disabled = true;
+        getDbBtn.disabled = false;
+        databaseSelect.innerHTML = '<option value="">请先获取数据库列表</option>';
+        databaseSelect.disabled = true;
+        // 重置排序状态
         currentSortField = '';
         currentSortOrder = 'ASC';
       } catch (error) {
@@ -256,7 +307,7 @@
       }
     });
 
-    // 核心修复：查询表数据（确保排序参数正确传递）
+    // 查询表数据
     async function queryTableData() {
       const tableName = tableSelect.value;
       if (!tableName) {
@@ -264,7 +315,6 @@
         return;
       }
 
-      // 调试：打印要发送的排序参数
       console.log('发送的排序参数：', {
         tableName,
         sortField: currentSortField,
@@ -318,18 +368,16 @@
       tableHtml += '</table>';
       dataContainer.innerHTML = tableHtml;
 
-      // 绑定表头点击事件（核心修复：确保点击后重新查询）
+      // 绑定表头点击事件
       document.querySelectorAll('th[data-field]').forEach(th => {
         th.addEventListener('click', () => {
           const field = th.dataset.field;
-          // 更新排序状态
           if (field === currentSortField) {
             currentSortOrder = currentSortOrder === 'ASC' ? 'DESC' : 'ASC';
           } else {
             currentSortField = field;
             currentSortOrder = 'ASC';
           }
-          // 立即重新查询（使用最新的排序参数）
           queryTableData();
         });
       });
@@ -337,10 +385,8 @@
 
     // 查询按钮点击事件
     queryBtn.addEventListener('click', () => {
-      // 重置排序状态
       currentSortField = '';
       currentSortOrder = 'ASC';
-      // 执行查询
       queryTableData();
     });
 

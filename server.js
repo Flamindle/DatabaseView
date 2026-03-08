@@ -1,116 +1,212 @@
 const express = require('express');
-const mysql = require('mysql2/promise');
+const mysql = require('mysql2');
 const cors = require('cors');
 const app = express();
 
-// 中间件配置
 app.use(cors());
 app.use(express.json());
 app.use(express.static('.'));
 
-// 全局数据库连接
-let dbConnection = null;
+// 数据库连接对象
+let conn = null;
+// 临时连接（用于获取数据库列表）
+let tempConn = null;
 
-// 1. 连接数据库接口
-app.post('/connect', async (req, res) => {
+// 新增：时间格式化函数（中国时区）
+/**
+ * 将UTC时间转换为中国时区（东八区）的YYYY-MM-DD HH:mm:ss格式
+ * @param {String/Date} time - 原始时间（ISO格式字符串/Date对象）
+ * @returns {String} 格式化后的时间字符串
+ */
+function formatChinaTime(time) {
+  if (!time) return '';
+
+  // 转为Date对象
+  const date = new Date(time);
+
+  // 使用中国时区格式化（东八区）
+  // 方法1：手动计算东八区时间
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+
+  // 拼接为目标格式：YYYY-MM-DD HH:mm:ss
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
+// 1. 获取MySQL服务器上的所有数据库列表
+app.post('/get-databases', (req, res) => {
+  const { host, port, user, password } = req.body;
+
+  // 关闭旧的临时连接
+  if (tempConn) tempConn.end();
+
+  // 创建临时连接（不指定database，仅连接服务器）
+  tempConn = mysql.createConnection({
+    host,
+    port: parseInt(port),
+    user,
+    password,
+    connectTimeout: 5000
+  });
+
+  tempConn.connect((err) => {
+    if (err) {
+      console.error('获取数据库列表失败：', err.message);
+      return res.json({
+        success: false,
+        message: '连接服务器失败：' + err.message
+      });
+    }
+
+    // 查询所有数据库
+    tempConn.query('SHOW DATABASES', (err, databases) => {
+      if (err) {
+        tempConn.end();
+        return res.json({
+          success: false,
+          message: '获取数据库列表失败：' + err.message
+        });
+      }
+
+      // 格式化数据库列表（排除系统数据库）
+      const dbList = databases
+        .map(item => item.Database)
+        .filter(db => !['information_schema', 'mysql', 'performance_schema', 'sys'].includes(db));
+
+      res.json({
+        success: true,
+        message: '获取数据库列表成功',
+        databases: dbList
+      });
+    });
+  });
+});
+
+// 2. 连接指定数据库
+app.post('/connect', (req, res) => {
   const { host, port, user, password, database } = req.body;
 
-  try {
-    // 关闭旧连接
-    if (dbConnection) {
-      await dbConnection.end();
-      dbConnection = null;
+  // 关闭旧连接
+  if (conn) conn.end();
+
+  // 创建连接（指定具体数据库）
+  conn = mysql.createConnection({
+    host,
+    port: parseInt(port),
+    user,
+    password,
+    database
+  });
+
+  conn.connect((err) => {
+    if (err) {
+      console.error('连接数据库失败：', err.message);
+      return res.json({
+        success: false,
+        message: '连接数据库失败：' + err.message
+      });
     }
 
-    // 创建新连接
-    dbConnection = await mysql.createConnection({
-      host: host || 'localhost',
-      port: parseInt(port) || 3306,
-      user: user || 'root',
-      password: password || '',
-      database: database,
-      connectTimeout: 5000
+    // 查询该数据库下的表列表
+    conn.query('SHOW TABLES', (err, tables) => {
+      if (err) {
+        conn.end();
+        return res.json({
+          success: false,
+          message: '获取表列表失败：' + err.message
+        });
+      }
+      const tableList = tables.map(item => item[`Tables_in_${database}`]);
+      console.log(`连接成功：${host}:${port}/${database}`);
+      res.json({
+        success: true,
+        message: '连接数据库成功',
+        tables: tableList
+      });
     });
-
-    // 查询表列表（纯SQL，无占位符）
-    const [tables] = await dbConnection.execute(`SHOW TABLES FROM \`${database}\``);
-    const tableList = tables.map(item => {
-      const key = `Tables_in_${database}`;
-      return item[key] || '';
-    }).filter(Boolean);
-
-    console.log(`连接成功：${host}:${port}/${database}，表列表：`, tableList);
-    res.json({
-      success: true,
-      message: '数据库连接成功',
-      tables: tableList
-    });
-  } catch (error) {
-    console.error('连接失败：', error.message);
-    res.json({
-      success: false,
-      message: `连接失败：${error.message}`
-    });
-  }
+  });
 });
 
-// 2. 查询表数据接口（完全移除??占位符）
-app.post('/query-table', async (req, res) => {
+// 3. 查询表数据（修改：格式化时间字段为中国时区）
+app.post('/query-table', (req, res) => {
   const { tableName, sortField, sortOrder } = req.body;
 
-  // 基础校验
-  if (!dbConnection) {
+  if (!conn) {
     return res.json({ success: false, message: '未连接数据库' });
   }
-  if (!tableName || tableName.trim() === '') {
-    return res.json({ success: false, message: '表名不能为空' });
+
+  // 构建排序语句
+  let orderBy = '';
+  if (sortField && sortField.trim()) {
+    const order = sortOrder === 'DESC' ? 'DESC' : 'ASC';
+    orderBy = ` ORDER BY \`${sortField.trim()}\` ${order}`;
   }
 
-  try {
-    // 构建排序语句（安全拼接）
-    let orderBy = '';
-    // 校验排序字段和方向（防止SQL注入）
-    if (sortField && /^[\w\u4e00-\u9fa5]+$/.test(sortField.trim())) {
-      const safeOrder = sortOrder && sortOrder.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
-      orderBy = ` ORDER BY \`${sortField.trim()}\` ${safeOrder}`;
+  // 最终SQL（纯字符串，无占位符）
+  const sql = `SELECT * FROM \`${tableName.trim()}\` ${orderBy}`;
+  console.log('执行的SQL：', sql);
+
+  // 执行查询
+  conn.query(sql, (err, rows, fields) => {
+    if (err) {
+      console.error('查询失败：', err.message);
+      return res.json({ success: false, message: '查询失败：' + err.message });
     }
 
-    // 构建最终SQL（用反引号包裹表名，无任何占位符）
-    const sql = `SELECT * FROM \`${tableName.trim()}\` ${orderBy}`;
-    console.log('执行的SQL：', sql);
+    // 获取字段信息
+    const fieldInfo = fields.map(field => ({
+      name: field.name,
+      type: field.type
+    }));
 
-    // 执行查询（直接执行，无参数数组）
-    const [rows] = await dbConnection.execute(sql);
-    const [fields] = await dbConnection.execute(`DESCRIBE \`${tableName.trim()}\``);
+    // 遍历数据行，格式化所有时间类型字段
+    const formattedRows = rows.map(row => {
+      const newRow = {};
+
+      // 遍历所有字段
+      fieldInfo.forEach(field => {
+        const fieldName = field.name;
+        const fieldType = field.type;
+        const value = row[fieldName];
+
+        // 判断是否为时间类型字段并格式化
+        if (value && (fieldType === 12 || fieldType === 7 || fieldType === 10 || fieldType === 11)) {
+          // MySQL类型编号：
+          // 7: timestamp, 10: date, 11: time, 12: datetime
+          newRow[fieldName] = formatChinaTime(value);
+        } else {
+          newRow[fieldName] = value;
+        }
+      });
+
+      return newRow;
+    });
+
+    // 提取字段名
+    const fieldNames = fieldInfo.map(f => f.name);
 
     res.json({
       success: true,
-      fields: fields.map(f => f.Field || ''),
-      data: rows
+      fields: fieldNames,
+      data: formattedRows // 返回格式化后的数据
     });
-  } catch (error) {
-    console.error('查询失败：', error.message);
-    res.json({
-      success: false,
-      message: `查询失败：${error.message}`
-    });
-  }
+  });
 });
 
-// 3. 断开连接接口
-app.post('/disconnect', async (req, res) => {
-  try {
-    if (dbConnection) {
-      await dbConnection.end();
-      dbConnection = null;
-    }
-    res.json({ success: true, message: '已断开数据库连接' });
-  } catch (error) {
-    res.json({ success: false, message: `断开失败：${error.message}` });
-  }
+// 4. 断开连接
+app.post('/disconnect', (req, res) => {
+  if (conn) conn.end();
+  if (tempConn) tempConn.end();
+  conn = null;
+  tempConn = null;
+  res.json({ success: true, message: '已断开所有连接' });
 });
 
 // 启动服务
 app.listen(3000, () => {
-  console.log('服务启动成功：http://localhost:3000');
+  console.log('服务运行在 http://localhost:3000');
 });
