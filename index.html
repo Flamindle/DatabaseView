@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MySQL 数据库查看器</title>
   <style>
+    /* 保留原有样式，无需修改 */
     * {
       margin: 0;
       padding: 0;
@@ -93,6 +94,24 @@
     th {
       background-color: #f8f9fa;
       font-weight: bold;
+      cursor: pointer;
+      user-select: none;
+    }
+    th:hover {
+      background-color: #e9ecef;
+    }
+    th::after {
+      content: '';
+      margin-left: 5px;
+      font-size: 0.8em;
+    }
+    th.asc::after {
+      content: '↑';
+      color: #007bff;
+    }
+    th.desc::after {
+      content: '↓';
+      color: #007bff;
     }
     tr:nth-child(even) {
       background-color: #f8f9fa;
@@ -161,6 +180,10 @@
     const queryBtn = document.getElementById('queryBtn');
     const dataContainer = document.getElementById('dataContainer');
 
+    // 排序状态管理（确保全局可用）
+    let currentSortField = '';
+    let currentSortOrder = 'ASC';
+
     // 显示消息提示
     function showMessage(text, isSuccess = true) {
       messageDiv.textContent = text;
@@ -177,7 +200,6 @@
         database: databaseInput.value.trim()
       };
 
-      // 简单参数验证
       if (!params.host || !params.port || !params.user || !params.database) {
         showMessage('请填写完整的连接参数', false);
         return;
@@ -193,7 +215,6 @@
 
         if (result.success) {
           showMessage(result.message);
-          // 填充表列表
           tableSelect.innerHTML = '<option value="">请选择表</option>';
           result.tables.forEach(table => {
             const option = document.createElement('option');
@@ -201,7 +222,6 @@
             option.textContent = table;
             tableSelect.appendChild(option);
           });
-          // 更新UI状态
           tableSection.classList.remove('hidden');
           queryBtn.disabled = false;
           connectBtn.disabled = true;
@@ -224,53 +244,49 @@
         const result = await response.json();
 
         showMessage(result.message);
-        // 重置UI状态
         tableSection.classList.add('hidden');
         dataContainer.innerHTML = '';
         connectBtn.disabled = false;
         disconnectBtn.disabled = true;
         queryBtn.disabled = true;
+        currentSortField = '';
+        currentSortOrder = 'ASC';
       } catch (error) {
         showMessage(`断开连接失败：${error.message}`, false);
       }
     });
 
-    // 查询表数据
-    queryBtn.addEventListener('click', async () => {
+    // 核心修复：查询表数据（确保排序参数正确传递）
+    async function queryTableData() {
       const tableName = tableSelect.value;
       if (!tableName) {
         showMessage('请选择要查询的数据表', false);
         return;
       }
 
+      // 调试：打印要发送的排序参数
+      console.log('发送的排序参数：', {
+        tableName,
+        sortField: currentSortField,
+        sortOrder: currentSortOrder
+      });
+
       try {
         const response = await fetch('http://localhost:3000/query-table', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tableName })
+          body: JSON.stringify({
+            tableName,
+            sortField: currentSortField,
+            sortOrder: currentSortOrder
+          })
         });
         const result = await response.json();
 
         if (result.success) {
-          showMessage(`查询成功，共 ${result.data.length} 条记录`);
-          // 构建数据表格
-          let tableHtml = '<table>';
-          // 表头
-          tableHtml += '<tr>';
-          result.fields.forEach(field => {
-            tableHtml += `<th>${field}</th>`;
-          });
-          tableHtml += '</tr>';
-          // 数据行
-          result.data.forEach(row => {
-            tableHtml += '<tr>';
-            result.fields.forEach(field => {
-              tableHtml += `<td>${row[field] || ''}</td>`;
-            });
-            tableHtml += '</tr>';
-          });
-          tableHtml += '</table>';
-          dataContainer.innerHTML = tableHtml;
+          const sortTip = currentSortField ? `，按${currentSortField}${currentSortOrder === 'ASC' ? '升序' : '降序'}` : '';
+          showMessage(`查询成功，共 ${result.data.length} 条记录${sortTip}`);
+          buildTableHtml(result.fields, result.data);
         } else {
           showMessage(result.message, false);
           dataContainer.innerHTML = '';
@@ -279,11 +295,60 @@
         showMessage(`查询请求失败：${error.message}`, false);
         dataContainer.innerHTML = '';
       }
+    }
+
+    // 构建表格HTML
+    function buildTableHtml(fields, data) {
+      let tableHtml = '<table>';
+      // 表头
+      tableHtml += '<tr>';
+      fields.forEach(field => {
+        const sortClass = field === currentSortField ? currentSortOrder.toLowerCase() : '';
+        tableHtml += `<th class="${sortClass}" data-field="${field}">${field}</th>`;
+      });
+      tableHtml += '</tr>';
+      // 数据行
+      data.forEach(row => {
+        tableHtml += '<tr>';
+        fields.forEach(field => {
+          tableHtml += `<td>${row[field] || ''}</td>`;
+        });
+        tableHtml += '</tr>';
+      });
+      tableHtml += '</table>';
+      dataContainer.innerHTML = tableHtml;
+
+      // 绑定表头点击事件（核心修复：确保点击后重新查询）
+      document.querySelectorAll('th[data-field]').forEach(th => {
+        th.addEventListener('click', () => {
+          const field = th.dataset.field;
+          // 更新排序状态
+          if (field === currentSortField) {
+            currentSortOrder = currentSortOrder === 'ASC' ? 'DESC' : 'ASC';
+          } else {
+            currentSortField = field;
+            currentSortOrder = 'ASC';
+          }
+          // 立即重新查询（使用最新的排序参数）
+          queryTableData();
+        });
+      });
+    }
+
+    // 查询按钮点击事件
+    queryBtn.addEventListener('click', () => {
+      // 重置排序状态
+      currentSortField = '';
+      currentSortOrder = 'ASC';
+      // 执行查询
+      queryTableData();
     });
 
-    // 表选择器变化时清空数据
+    // 表选择器变化时重置
     tableSelect.addEventListener('change', () => {
       dataContainer.innerHTML = '';
+      currentSortField = '';
+      currentSortOrder = 'ASC';
     });
   </script>
 </body>
