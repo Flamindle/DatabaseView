@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MySQL 数据库查看器</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+    body {
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 0 20px;
+      background-color: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .connection-form {
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #eee;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: inline-block;
+      width: 100px;
+      font-weight: bold;
+    }
+    input {
+      padding: 8px 10px;
+      width: 300px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    button:disabled {
+      background-color: #6c757d;
+      cursor: not-allowed;
+    }
+    .table-selector {
+      margin-bottom: 20px;
+    }
+    select {
+      padding: 8px 10px;
+      width: 300px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .message {
+      margin: 15px 0;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      padding: 12px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+    th {
+      background-color: #f8f9fa;
+      font-weight: bold;
+    }
+    tr:nth-child(even) {
+      background-color: #f8f9fa;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>MySQL 数据库查看器</h1>
+
+    <!-- 数据库连接表单 -->
+    <div class="connection-form">
+      <div class="form-group">
+        <label>主机地址：</label>
+        <input type="text" id="host" value="localhost" placeholder="例如：127.0.0.1">
+      </div>
+      <div class="form-group">
+        <label>端口号：</label>
+        <input type="number" id="port" value="3306" placeholder="默认3306">
+      </div>
+      <div class="form-group">
+        <label>用户名：</label>
+        <input type="text" id="user" value="root" placeholder="例如：root">
+      </div>
+      <div class="form-group">
+        <label>密码：</label>
+        <input type="password" id="password" placeholder="数据库密码">
+      </div>
+      <div class="form-group">
+        <label>数据库名：</label>
+        <input type="text" id="database" placeholder="要连接的数据库名称">
+      </div>
+      <button id="connectBtn">连接数据库</button>
+      <button id="disconnectBtn" disabled>断开连接</button>
+      <div id="message" class="message hidden"></div>
+    </div>
+
+    <!-- 表选择器 -->
+    <div class="table-selector hidden" id="tableSection">
+      <label>选择数据表：</label>
+      <select id="tableSelect">
+        <option value="">请选择表</option>
+      </select>
+      <button id="queryBtn" disabled>查询数据</button>
+    </div>
+
+    <!-- 数据展示区域 -->
+    <div id="dataContainer"></div>
+  </div>
+
+  <script>
+    // DOM 元素
+    const hostInput = document.getElementById('host');
+    const portInput = document.getElementById('port');
+    const userInput = document.getElementById('user');
+    const passwordInput = document.getElementById('password');
+    const databaseInput = document.getElementById('database');
+    const connectBtn = document.getElementById('connectBtn');
+    const disconnectBtn = document.getElementById('disconnectBtn');
+    const messageDiv = document.getElementById('message');
+    const tableSection = document.getElementById('tableSection');
+    const tableSelect = document.getElementById('tableSelect');
+    const queryBtn = document.getElementById('queryBtn');
+    const dataContainer = document.getElementById('dataContainer');
+
+    // 显示消息提示
+    function showMessage(text, isSuccess = true) {
+      messageDiv.textContent = text;
+      messageDiv.className = `message ${isSuccess ? 'success' : 'error'}`;
+    }
+
+    // 连接数据库
+    connectBtn.addEventListener('click', async () => {
+      const params = {
+        host: hostInput.value.trim(),
+        port: portInput.value.trim(),
+        user: userInput.value.trim(),
+        password: passwordInput.value.trim(),
+        database: databaseInput.value.trim()
+      };
+
+      // 简单参数验证
+      if (!params.host || !params.port || !params.user || !params.database) {
+        showMessage('请填写完整的连接参数', false);
+        return;
+      }
+
+      try {
+        const response = await fetch('http://localhost:3000/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(params)
+        });
+        const result = await response.json();
+
+        if (result.success) {
+          showMessage(result.message);
+          // 填充表列表
+          tableSelect.innerHTML = '<option value="">请选择表</option>';
+          result.tables.forEach(table => {
+            const option = document.createElement('option');
+            option.value = table;
+            option.textContent = table;
+            tableSelect.appendChild(option);
+          });
+          // 更新UI状态
+          tableSection.classList.remove('hidden');
+          queryBtn.disabled = false;
+          connectBtn.disabled = true;
+          disconnectBtn.disabled = false;
+        } else {
+          showMessage(result.message, false);
+        }
+      } catch (error) {
+        showMessage(`请求失败：${error.message}`, false);
+      }
+    });
+
+    // 断开数据库连接
+    disconnectBtn.addEventListener('click', async () => {
+      try {
+        const response = await fetch('http://localhost:3000/disconnect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await response.json();
+
+        showMessage(result.message);
+        // 重置UI状态
+        tableSection.classList.add('hidden');
+        dataContainer.innerHTML = '';
+        connectBtn.disabled = false;
+        disconnectBtn.disabled = true;
+        queryBtn.disabled = true;
+      } catch (error) {
+        showMessage(`断开连接失败：${error.message}`, false);
+      }
+    });
+
+    // 查询表数据
+    queryBtn.addEventListener('click', async () => {
+      const tableName = tableSelect.value;
+      if (!tableName) {
+        showMessage('请选择要查询的数据表', false);
+        return;
+      }
+
+      try {
+        const response = await fetch('http://localhost:3000/query-table', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tableName })
+        });
+        const result = await response.json();
+
+        if (result.success) {
+          showMessage(`查询成功，共 ${result.data.length} 条记录`);
+          // 构建数据表格
+          let tableHtml = '<table>';
+          // 表头
+          tableHtml += '<tr>';
+          result.fields.forEach(field => {
+            tableHtml += `<th>${field}</th>`;
+          });
+          tableHtml += '</tr>';
+          // 数据行
+          result.data.forEach(row => {
+            tableHtml += '<tr>';
+            result.fields.forEach(field => {
+              tableHtml += `<td>${row[field] || ''}</td>`;
+            });
+            tableHtml += '</tr>';
+          });
+          tableHtml += '</table>';
+          dataContainer.innerHTML = tableHtml;
+        } else {
+          showMessage(result.message, false);
+          dataContainer.innerHTML = '';
+        }
+      } catch (error) {
+        showMessage(`查询请求失败：${error.message}`, false);
+        dataContainer.innerHTML = '';
+      }
+    });
+
+    // 表选择器变化时清空数据
+    tableSelect.addEventListener('change', () => {
+      dataContainer.innerHTML = '';
+    });
+  </script>
+</body>
+</html>
