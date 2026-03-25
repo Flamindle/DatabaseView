@@ -179,6 +179,102 @@
     .hidden {
       display: none;
     }
+    /* 表格工具栏 */
+    .table-tools {
+      margin-top: 10px;
+      margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: #555;
+    }
+    .table-tools button {
+      padding: 4px 10px;
+      font-size: 12px;
+      border-radius: 12px;
+      border: 1px solid #ccc;
+      background-color: #f8f9fa;
+      color: #333;
+      cursor: pointer;
+    }
+    .table-tools button.active {
+      background-color: #007bff;
+      color: #fff;
+      border-color: #007bff;
+    }
+    /* 右键菜单样式 */
+    .header-context-menu {
+      position: fixed;
+      background: #fff;
+      border: 1px solid #ccc;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      border-radius: 4px;
+      z-index: 9999;
+      min-width: 140px;
+      font-size: 13px;
+    }
+    .header-context-menu.hidden {
+      display: none;
+    }
+    .header-context-menu div {
+      padding: 6px 12px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .header-context-menu div:hover {
+      background-color: #f1f1f1;
+    }
+    /* 自定义字段面板 */
+    .field-panel {
+      margin-top: 6px;
+      padding: 8px 10px;
+      border: 1px solid #eee;
+      border-radius: 4px;
+      background-color: #fafafa;
+      font-size: 12px;
+    }
+    .field-panel-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      color: #555;
+    }
+    .field-panel-header button {
+      padding: 2px 8px;
+      font-size: 12px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      background-color: #fff;
+      cursor: pointer;
+    }
+    .field-panel-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 8px;
+    }
+    .field-chip {
+      padding: 2px 8px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      background-color: #fff;
+      font-size: 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .field-chip.active {
+      background-color: #007bff;
+      border-color: #007bff;
+      color: #fff;
+    }
+    .field-chip.inactive {
+      opacity: 0.5;
+    }
+    .field-panel-list label {
+      white-space: nowrap;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -225,6 +321,16 @@
       <button id="queryBtn" disabled>查询数据</button>
     </div>
 
+    <!-- 表格工具栏（视图模式等） -->
+    <div class="table-tools hidden" id="tableTools">
+      <span>视图：</span>
+      <button id="viewModeFull" class="active">全字段</button>
+      <button id="viewModeCustom">自定义字段</button>
+    </div>
+
+    <!-- 自定义字段面板 -->
+    <div class="field-panel hidden" id="fieldPanel"></div>
+
     <!-- 数据展示区域 -->
     <div id="dataContainer"></div>
   </div>
@@ -244,10 +350,16 @@
     const tableSelect = document.getElementById('tableSelect');
     const queryBtn = document.getElementById('queryBtn');
     const dataContainer = document.getElementById('dataContainer');
+    const tableTools = document.getElementById('tableTools');
+    const fieldPanel = document.getElementById('fieldPanel');
 
     // 排序状态管理
     let currentSortField = '';
     let currentSortOrder = 'ASC';
+
+    // 字段配置：顺序 + 显隐
+    let columnsConfig = [];
+    let currentViewMode = 'full'; // full / custom
 
     // localStorage 持久化
     const STORAGE_KEY = 'mysql_viewer_config';
@@ -510,6 +622,83 @@
       }
     });
 
+    // 视图模式按钮事件
+    document.getElementById('viewModeFull').addEventListener('click', () => {
+      currentViewMode = 'full';
+      document.getElementById('viewModeFull').classList.add('active');
+      document.getElementById('viewModeCustom').classList.remove('active');
+      fieldPanel.classList.add('hidden');
+      if (columnsConfig && columnsConfig.length) {
+        columnsConfig.forEach(col => { col.visible = true; });
+        if (window.__lastQueryResult) {
+          buildTableHtml(window.__lastQueryResult.fields, window.__lastQueryResult.data);
+        }
+      }
+    });
+
+    document.getElementById('viewModeCustom').addEventListener('click', () => {
+      currentViewMode = 'custom';
+      document.getElementById('viewModeCustom').classList.add('active');
+      document.getElementById('viewModeFull').classList.remove('active');
+      renderFieldPanel();
+    });
+
+    function renderFieldPanel() {
+      if (!columnsConfig || !columnsConfig.length) return;
+      fieldPanel.classList.remove('hidden');
+      const allChecked = columnsConfig.every(c => c.visible !== false);
+      const anyChecked = columnsConfig.some(c => c.visible !== false);
+
+      let html = '<div class="field-panel-header">';
+      html += '<span>自定义显示字段：</span>';
+      html += '<button type="button" data-action="check-all">全选</button>';
+      html += '<button type="button" data-action="uncheck-all">全不选</button>';
+      html += '</div>';
+      html += '<div class="field-panel-list">';
+      columnsConfig.forEach(col => {
+        const activeClass = col.visible !== false ? 'field-chip active' : 'field-chip inactive';
+        html += `<button type="button" class="${activeClass}" data-key="${col.key}">${col.key}</button>`;
+      });
+      html += '</div>';
+      fieldPanel.innerHTML = html;
+
+      // 字段按钮点击：切换显隐
+      fieldPanel.querySelectorAll('.field-chip').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const key = btn.getAttribute('data-key');
+          const col = columnsConfig.find(c => c.key === key);
+          if (!col) return;
+          col.visible = !col.visible;
+          if (window.__lastQueryResult) {
+            buildTableHtml(window.__lastQueryResult.fields, window.__lastQueryResult.data);
+          }
+          renderFieldPanel();
+        });
+      });
+
+      // 顶部“全选 / 全不选”
+      const headerButtons = fieldPanel.querySelectorAll('.field-panel-header button');
+      headerButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const action = btn.getAttribute('data-action');
+          if (action === 'check-all') {
+            columnsConfig.forEach(c => c.visible = true);
+          } else if (action === 'uncheck-all') {
+            columnsConfig.forEach(c => c.visible = false);
+          }
+          if (window.__lastQueryResult) {
+            buildTableHtml(window.__lastQueryResult.fields, window.__lastQueryResult.data);
+          }
+          renderFieldPanel();
+        });
+      });
+    }
+
+    function applyViewMode() {
+      // 已被新的视图逻辑替代，保留空实现避免报错
+      return;
+    }
+
     // 查询表数据
     async function queryTableData() {
       const tableName = tableSelect.value;
@@ -539,6 +728,14 @@
         if (result.success) {
           const sortTip = currentSortField ? `，按${currentSortField}${currentSortOrder === 'ASC' ? '升序' : '降序'}` : '';
           showMessage(`查询成功，共 ${result.data.length} 条记录${sortTip}`);
+          // 保存最近一次查询结果，供视图模式切换使用
+          window.__lastQueryResult = {
+            fields: result.fields,
+            data: result.data
+          };
+          // 初始化字段配置
+          columnsConfig = result.fields.map((name, index) => ({ key: name, visible: true }));
+          tableTools.classList.remove('hidden');
           buildTableHtml(result.fields, result.data);
         } else {
           showMessage(result.message, false);
@@ -552,13 +749,22 @@
 
     // 构建表格HTML
     function buildTableHtml(fields, data) {
-      const isWideTable = fields.length > 5;
+      // 如果有 columnsConfig，则按配置过滤和排序字段
+      let effectiveFields = fields;
+      if (columnsConfig && columnsConfig.length) {
+        const visibleOrderKeys = columnsConfig
+          .filter(col => col.visible !== false && fields.includes(col.key))
+          .map(col => col.key);
+        effectiveFields = visibleOrderKeys;
+      }
+
+      const isWideTable = effectiveFields.length > 5;
       let tableHtml = `<div class="table-wrapper"><table>`;
       // 表头
       tableHtml += '<tr>';
-      fields.forEach(field => {
+      effectiveFields.forEach(field => {
         const sortClass = field === currentSortField ? currentSortOrder.toLowerCase() : '';
-        tableHtml += `<th class="${sortClass}" data-field="${field}">
+        tableHtml += `<th class="${sortClass}" data-field="${field}" draggable="true">
           <span class="th-text">${field}</span>
           <span class="col-resizer"></span>
         </th>`;
@@ -567,7 +773,7 @@
       // 数据行
       data.forEach(row => {
         tableHtml += '<tr>';
-        fields.forEach(field => {
+        effectiveFields.forEach(field => {
           tableHtml += `<td>${row[field] || ''}</td>`;
         });
         tableHtml += '</tr>';
@@ -577,15 +783,19 @@
       // 添加字段数量提示
       const countClass = isWideTable ? 'column-count warning' : 'column-count';
       const countTip = isWideTable
-        ? `⚠️ 表格字段较多（${fields.length}个），可横向滚动查看更多`
-        : `共 ${fields.length} 个字段，${data.length} 条记录`;
+        ? `⚠️ 表格字段较多（${effectiveFields.length}个），可横向滚动查看更多`
+        : `共 ${effectiveFields.length} 个字段，${data.length} 条记录`;
       dataContainer.innerHTML = `<div class="${countClass}">${countTip}</div>` + tableHtml;
 
       const table = dataContainer.querySelector('table');
       if (!table) return;
 
-      // 绑定表头点击事件（排除拖拽条）
+      // 绑定表头事件（排序 / 右键菜单 / 拖拽调整顺序）
+      let dragStartKey = null;
       table.querySelectorAll('th[data-field]').forEach(th => {
+        const fieldName = th.dataset.field;
+
+        // 点击排序（排除拖拽条）
         th.addEventListener('click', (e) => {
           if (e.target.classList.contains('col-resizer')) return;
           const field = th.dataset.field;
@@ -597,10 +807,111 @@
           }
           queryTableData();
         });
+
+        // 右键菜单：隐藏字段/仅保留此字段
+        th.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          showHeaderContextMenu(e.pageX, e.pageY, fieldName);
+        });
+
+        // 拖拽调整字段顺序
+        th.addEventListener('dragstart', (e) => {
+          dragStartKey = fieldName;
+          e.dataTransfer.effectAllowed = 'move';
+          th.classList.add('drag-source');
+        });
+
+        th.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          th.classList.add('drag-over');
+        });
+
+        th.addEventListener('dragleave', () => {
+          th.classList.remove('drag-over');
+        });
+
+        th.addEventListener('drop', (e) => {
+          e.preventDefault();
+          th.classList.remove('drag-over');
+          const targetKey = fieldName;
+          if (!dragStartKey || dragStartKey === targetKey || !columnsConfig || !columnsConfig.length) return;
+
+          const fromIndex = columnsConfig.findIndex(c => c.key === dragStartKey);
+          const toIndex = columnsConfig.findIndex(c => c.key === targetKey);
+          if (fromIndex === -1 || toIndex === -1) return;
+
+          const [moved] = columnsConfig.splice(fromIndex, 1);
+          columnsConfig.splice(toIndex, 0, moved);
+
+          dragStartKey = null;
+          if (window.__lastQueryResult) {
+            buildTableHtml(window.__lastQueryResult.fields, window.__lastQueryResult.data);
+          }
+        });
+
+        th.addEventListener('dragend', () => {
+          th.classList.remove('drag-source');
+        });
       });
 
       // 启用列宽拖拽
       enableColumnResize(table);
+    }
+
+    // 右键菜单逻辑
+    let headerMenuEl = null;
+    function getHeaderMenuElement() {
+      if (!headerMenuEl) {
+        headerMenuEl = document.createElement('div');
+        headerMenuEl.className = 'header-context-menu hidden';
+        headerMenuEl.innerHTML = `
+          <div data-action="hide">隐藏此字段</div>
+          <div data-action="only">仅保留此字段</div>
+          <div data-action="reset">重置字段显示</div>
+        `;
+        document.body.appendChild(headerMenuEl);
+
+        document.addEventListener('click', () => {
+          headerMenuEl.classList.add('hidden');
+        });
+      }
+      return headerMenuEl;
+    }
+
+    function showHeaderContextMenu(x, y, fieldName) {
+      const menu = getHeaderMenuElement();
+      menu.style.left = x + 'px';
+      menu.style.top = y + 'px';
+      menu.classList.remove('hidden');
+
+      const handler = (e) => {
+        const action = e.target.getAttribute('data-action');
+        if (!action) return;
+        e.stopPropagation();
+        menu.classList.add('hidden');
+
+        if (!columnsConfig || !columnsConfig.length) return;
+        if (action === 'hide') {
+          columnsConfig.forEach(col => {
+            if (col.key === fieldName) col.visible = false;
+          });
+        } else if (action === 'only') {
+          columnsConfig.forEach(col => {
+            col.visible = (col.key === fieldName);
+          });
+        } else if (action === 'reset') {
+          columnsConfig.forEach(col => {
+            col.visible = true;
+          });
+        }
+
+        if (window.__lastQueryResult) {
+          buildTableHtml(window.__lastQueryResult.fields, window.__lastQueryResult.data);
+        }
+      };
+
+      menu.onclick = handler;
     }
 
     // 启用列宽拖拽
