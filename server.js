@@ -42,7 +42,10 @@ app.post('/get-databases', (req, res) => {
   const { host, port, user, password } = req.body;
 
   // 关闭旧的临时连接
-  if (tempConn) tempConn.end();
+  if (tempConn) {
+    try { tempConn.end(); } catch (e) {}
+    tempConn = null;
+  }
 
   // 创建临时连接（不指定database，仅连接服务器）
   tempConn = mysql.createConnection({
@@ -91,7 +94,10 @@ app.post('/connect', (req, res) => {
   const { host, port, user, password, database } = req.body;
 
   // 关闭旧连接
-  if (conn) conn.end();
+  if (conn) {
+    try { conn.end(); } catch (e) {}
+    conn = null;
+  }
 
   // 创建连接（指定具体数据库）
   conn = mysql.createConnection({
