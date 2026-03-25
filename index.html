@@ -123,6 +123,19 @@
       content: '↓';
       color: #007bff;
     }
+    /* 列宽拖拽条 */
+    th .col-resizer {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 6px;
+      height: 100%;
+      cursor: col-resize;
+      user-select: none;
+    }
+    th .col-resizer:hover {
+      background-color: rgba(0, 0, 0, 0.1);
+    }
     tr:nth-child(even) {
       background-color: #f8f9fa;
     }
@@ -277,6 +290,81 @@
       if (config && config.database) {
         // 仅恢复数据库名的记忆，不自动触发表连接
         // 等用户点击“获取数据库列表”后，再从下拉框中选择
+      }
+    })();
+
+    // 页面加载时，尝试自动恢复上一次使用的数据库和数据表
+    (async function restoreDatabaseAndTable() {
+      const config = loadConnectionConfig();
+      if (!config || !config.host || !config.port || !config.user) return;
+
+      try {
+        // 1. 获取数据库列表
+        const baseParams = {
+          host: config.host,
+          port: config.port,
+          user: config.user,
+          password: config.password || ''
+        };
+
+        const dbResp = await fetch('http://localhost:3000/get-databases', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(baseParams)
+        });
+        const dbResult = await dbResp.json();
+        if (!dbResult.success) return;
+
+        // 填充数据库下拉框
+        databaseSelect.innerHTML = '<option value="">请选择数据库</option>';
+        dbResult.databases.forEach(db => {
+          const option = document.createElement('option');
+          option.value = db;
+          option.textContent = db;
+          databaseSelect.appendChild(option);
+        });
+        databaseSelect.disabled = false;
+        connectBtn.disabled = false;
+
+        // 没有记录过数据库名就不继续
+        if (!config.database || !dbResult.databases.includes(config.database)) return;
+        databaseSelect.value = config.database;
+
+        // 2. 自动连接数据库，恢复表列表
+        const connParams = {
+          ...baseParams,
+          database: config.database
+        };
+
+        const connResp = await fetch('http://localhost:3000/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(connParams)
+        });
+        const connResult = await connResp.json();
+        if (!connResult.success) return;
+
+        tableSelect.innerHTML = '<option value="">请选择表</option>';
+        connResult.tables.forEach(table => {
+          const option = document.createElement('option');
+          option.value = table;
+          option.textContent = table;
+          tableSelect.appendChild(option);
+        });
+        tableSection.classList.remove('hidden');
+        queryBtn.disabled = false;
+        connectBtn.disabled = true;
+        disconnectBtn.disabled = false;
+        getDbBtn.disabled = true;
+
+        // 没有记录过数据表就不继续
+        if (!config.tableName || !connResult.tables.includes(config.tableName)) return;
+        tableSelect.value = config.tableName;
+
+        // 3. 自动查询上一次的数据表
+        await queryTableData();
+      } catch (e) {
+        // 静默失败，不影响手动操作
       }
     })();
 
@@ -470,7 +558,10 @@
       tableHtml += '<tr>';
       fields.forEach(field => {
         const sortClass = field === currentSortField ? currentSortOrder.toLowerCase() : '';
-        tableHtml += `<th class="${sortClass}" data-field="${field}">${field}</th>`;
+        tableHtml += `<th class="${sortClass}" data-field="${field}">
+          <span class="th-text">${field}</span>
+          <span class="col-resizer"></span>
+        </th>`;
       });
       tableHtml += '</tr>';
       // 数据行
@@ -490,9 +581,13 @@
         : `共 ${fields.length} 个字段，${data.length} 条记录`;
       dataContainer.innerHTML = `<div class="${countClass}">${countTip}</div>` + tableHtml;
 
-      // 绑定表头点击事件
-      document.querySelectorAll('th[data-field]').forEach(th => {
-        th.addEventListener('click', () => {
+      const table = dataContainer.querySelector('table');
+      if (!table) return;
+
+      // 绑定表头点击事件（排除拖拽条）
+      table.querySelectorAll('th[data-field]').forEach(th => {
+        th.addEventListener('click', (e) => {
+          if (e.target.classList.contains('col-resizer')) return;
           const field = th.dataset.field;
           if (field === currentSortField) {
             currentSortOrder = currentSortOrder === 'ASC' ? 'DESC' : 'ASC';
@@ -503,12 +598,79 @@
           queryTableData();
         });
       });
+
+      // 启用列宽拖拽
+      enableColumnResize(table);
+    }
+
+    // 启用列宽拖拽
+    function enableColumnResize(table) {
+      if (!table) return;
+      const ths = table.querySelectorAll('th');
+      ths.forEach((th, index) => {
+        const resizer = th.querySelector('.col-resizer');
+        if (!resizer) return;
+
+        let startX = 0;
+        let startWidth = 0;
+
+        const onMouseDown = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          startX = e.pageX;
+          startWidth = th.offsetWidth;
+
+          const onMouseMove = (moveEvent) => {
+            const delta = moveEvent.pageX - startX;
+            const newWidth = Math.max(startWidth + delta, 60);
+            setColumnWidth(table, index, newWidth);
+          };
+
+          const onMouseUp = () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+          };
+
+          document.addEventListener('mousemove', onMouseMove);
+          document.addEventListener('mouseup', onMouseUp);
+        };
+
+        resizer.addEventListener('mousedown', onMouseDown);
+      });
+    }
+
+    // 设置某一列宽度
+    function setColumnWidth(table, colIndex, width) {
+      const px = width + 'px';
+      const rows = table.querySelectorAll('tr');
+      rows.forEach(row => {
+        const cell = row.children[colIndex];
+        if (cell) {
+          cell.style.width = px;
+          cell.style.minWidth = px;
+          cell.style.maxWidth = px;
+        }
+      });
     }
 
     // 查询按钮点击事件
     queryBtn.addEventListener('click', () => {
       currentSortField = '';
       currentSortOrder = 'ASC';
+
+      // 保存当前选择的表
+      const tableName = tableSelect.value;
+      if (tableName) {
+        saveConnectionConfig({
+          host: hostInput.value.trim(),
+          port: portInput.value.trim(),
+          user: userInput.value.trim(),
+          password: passwordInput.value.trim(),
+          database: databaseSelect.value.trim(),
+          tableName
+        });
+      }
+
       queryTableData();
     });
 
@@ -517,6 +679,18 @@
       dataContainer.innerHTML = '';
       currentSortField = '';
       currentSortOrder = 'ASC';
+
+      const tableName = tableSelect.value;
+      if (tableName) {
+        saveConnectionConfig({
+          host: hostInput.value.trim(),
+          port: portInput.value.trim(),
+          user: userInput.value.trim(),
+          password: passwordInput.value.trim(),
+          database: databaseSelect.value.trim(),
+          tableName
+        });
+      }
     });
   </script>
 </body>
