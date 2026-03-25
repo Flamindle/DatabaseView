@@ -79,16 +79,33 @@
       border-collapse: collapse;
       margin-top: 20px;
     }
+    .table-wrapper {
+      overflow-x: auto;
+      max-height: 500px;
+      overflow-y: auto;
+      margin-top: 15px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    table {
+      width: max-content;
+      min-width: 100%;
+      border-collapse: collapse;
+    }
     th, td {
-      padding: 12px;
+      padding: 10px 14px;
       border: 1px solid #ddd;
       text-align: left;
+      white-space: nowrap;
     }
     th {
       background-color: #f8f9fa;
       font-weight: bold;
       cursor: pointer;
       user-select: none;
+      position: sticky;
+      top: 0;
+      z-index: 10;
     }
     th:hover {
       background-color: #e9ecef;
@@ -108,6 +125,43 @@
     }
     tr:nth-child(even) {
       background-color: #f8f9fa;
+    }
+    /* 首列固定 */
+    th:first-child, td:first-child {
+      position: sticky;
+      left: 0;
+      background-color: #fff;
+      z-index: 5;
+      font-weight: 500;
+      border-right: 2px solid #ccc;
+    }
+    th:first-child {
+      background-color: #f8f9fa;
+      z-index: 15;
+    }
+    tr:nth-child(even) td:first-child {
+      background-color: #f8f9fa;
+    }
+    th:first-child {
+      background-color: #e9ecef;
+    }
+    tr:hover td {
+      background-color: #fffde7;
+    }
+    tr:hover td:first-child {
+      background-color: #fffde7;
+    }
+    .column-count {
+      color: #666;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+    .column-count.warning {
+      color: #856404;
+      background-color: #fff3cd;
+      padding: 8px 12px;
+      border-radius: 4px;
+      display: inline-block;
     }
     .hidden {
       display: none;
@@ -182,6 +236,50 @@
     let currentSortField = '';
     let currentSortOrder = 'ASC';
 
+    // localStorage 持久化
+    const STORAGE_KEY = 'mysql_viewer_config';
+
+    // 保存连接信息到 localStorage
+    function saveConnectionConfig(config) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+    }
+
+    // 从 localStorage 读取连接信息
+    function loadConnectionConfig() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          return null;
+        }
+      }
+      return null;
+    }
+
+    // 页面加载时恢复连接信息
+    function restoreConnection() {
+      const config = loadConnectionConfig();
+      if (config) {
+        hostInput.value = config.host || 'localhost';
+        portInput.value = config.port || '3306';
+        userInput.value = config.user || 'root';
+        passwordInput.value = config.password || '';
+      }
+    }
+
+    // 初始化时恢复连接信息
+    restoreConnection();
+
+    // 页面加载时，如果有保存的数据库名，则尝试预选（仅恢复输入，不自动连接）
+    (function initDatabaseSelect() {
+      const config = loadConnectionConfig();
+      if (config && config.database) {
+        // 仅恢复数据库名的记忆，不自动触发表连接
+        // 等用户点击“获取数据库列表”后，再从下拉框中选择
+      }
+    })();
+
     // 显示消息提示
     function showMessage(text, isSuccess = true) {
       messageDiv.textContent = text;
@@ -202,6 +300,14 @@
         showMessage('请填写主机、端口、用户名', false);
         return;
       }
+
+      // 保存连接配置
+      saveConnectionConfig({
+        host: params.host,
+        port: params.port,
+        user: params.user,
+        password: params.password
+      });
 
       try {
         const response = await fetch('http://localhost:3000/get-databases', {
@@ -247,6 +353,15 @@
         showMessage('请选择数据库', false);
         return;
       }
+
+      // 保存连接配置（包含已选数据库）
+      saveConnectionConfig({
+        host: params.host,
+        port: params.port,
+        user: params.user,
+        password: params.password,
+        database: params.database
+      });
 
       try {
         const response = await fetch('http://localhost:3000/connect', {
@@ -349,7 +464,8 @@
 
     // 构建表格HTML
     function buildTableHtml(fields, data) {
-      let tableHtml = '<table>';
+      const isWideTable = fields.length > 5;
+      let tableHtml = `<div class="table-wrapper"><table>`;
       // 表头
       tableHtml += '<tr>';
       fields.forEach(field => {
@@ -365,8 +481,14 @@
         });
         tableHtml += '</tr>';
       });
-      tableHtml += '</table>';
-      dataContainer.innerHTML = tableHtml;
+      tableHtml += '</table></div>';
+
+      // 添加字段数量提示
+      const countClass = isWideTable ? 'column-count warning' : 'column-count';
+      const countTip = isWideTable
+        ? `⚠️ 表格字段较多（${fields.length}个），可横向滚动查看更多`
+        : `共 ${fields.length} 个字段，${data.length} 条记录`;
+      dataContainer.innerHTML = `<div class="${countClass}">${countTip}</div>` + tableHtml;
 
       // 绑定表头点击事件
       document.querySelectorAll('th[data-field]').forEach(th => {
