@@ -9,13 +9,16 @@ import './components/Toolbar/TableToolbar.css';
 import './components/FieldPanel/FieldPanel.css';
 import './components/ContextMenu/ContextMenu.css';
 import './components/Theme/ThemeToggle.css';
+import './components/CrudModal/CrudModal.css';
 
 import { init as initConnection } from './components/Connection/ConnectionForm.js';
 import { init as initToolbar } from './components/Toolbar/TableToolbar.js';
 import { init as initColumnManager } from './components/Table/ColumnManager.js';
 import { init as initTheme } from './components/Theme/ThemeToggle.js';
+import { init as initCrudModal, showAdd, showEdit } from './components/CrudModal/CrudModal.js';
 import { buildTable } from './components/Table/DataTable.js';
 import { loadConfig, saveConfig } from './utils/storage.js';
+import { deleteRecord } from './services/djangoApi.js';
 
 // ============================================================
 // 全局状态
@@ -40,23 +43,87 @@ const $data = document.getElementById('dataContainer');
 // 初始化主题切换
 initTheme();
 
+// ============================================================
+// CRUD 操作成功/失败回调
+// ============================================================
+function onCrudSuccess(message) {
+  showMsg(message, true);
+  // 刷新表格数据
+  if (state.currentTable) {
+    doQuery(state.currentTable, state.sortField, state.sortOrder, state.pagination.page);
+  }
+}
+
+function onCrudError(message) {
+  showMsg(message, false);
+}
 
 // ============================================================
-// 分页点击（document 事件委托，防止 HMR 后失效）
+// 分页点击（document 事件委托）
 // ============================================================
 let paginationHandlerActive = false;
 
 function ensurePaginationHandler() {
   if (paginationHandlerActive) return;
   paginationHandlerActive = true;
+
   document.addEventListener('click', (e) => {
-    const btn = e.target.closest('#paginationContainer button[data-page]');
-    if (!btn || btn.classList.contains('disabled')) return;
-    const newPage = parseInt(btn.dataset.page);
-    if (!isNaN(newPage) && state.currentTable) {
-      doQuery(state.currentTable, state.sortField, state.sortOrder, newPage);
+    // 分页按钮
+    const pageBtn = e.target.closest('#paginationContainer button[data-page]');
+    if (pageBtn && !pageBtn.classList.contains('disabled')) {
+      const newPage = parseInt(pageBtn.dataset.page);
+      if (!isNaN(newPage) && state.currentTable) {
+        doQuery(state.currentTable, state.sortField, state.sortOrder, newPage);
+      }
+      return;
+    }
+
+    // 表格操作按钮（编辑）
+    const editBtn = e.target.closest('.btn-edit');
+    if (editBtn) {
+      const recordId = editBtn.dataset.id;
+      const recordData = JSON.parse(editBtn.dataset.record || '{}');
+      showEdit(state.currentTable, recordId, recordData);
+      return;
+    }
+
+    // 表格操作按钮（删除）
+    const deleteBtn = e.target.closest('.btn-delete');
+    if (deleteBtn) {
+      const recordId = deleteBtn.dataset.id;
+      const recordName = deleteBtn.dataset.name || `ID: ${recordId}`;
+      if (confirm(`确定要删除这条记录吗？\n${recordName}`)) {
+        handleDelete(recordId);
+      }
+      return;
+    }
+
+    // 新增记录按钮
+    const addBtn = e.target.closest('#addRecordBtn');
+    if (addBtn) {
+      const fields = state.lastQueryResult ? state.lastQueryResult.fields : [];
+      showAdd(state.currentTable, fields);
+      return;
     }
   });
+}
+
+// ============================================================
+// 处理删除
+// ============================================================
+async function handleDelete(recordId) {
+  if (!state.currentTable) return;
+
+  try {
+    const result = await deleteRecord(state.currentTable, recordId);
+    if (result.success) {
+      onCrudSuccess('删除成功');
+    } else {
+      onCrudError(result.message);
+    }
+  } catch (err) {
+    onCrudError(`删除失败: ${err.message}`);
+  }
 }
 
 // ============================================================
@@ -122,7 +189,7 @@ function renderTable() {
     onSortChange: (sf, so) => {
       state.sortField = sf;
       state.sortOrder = so;
-      doQuery(state.currentTable, sf, so, 1); // 排序从第1页开始
+      doQuery(state.currentTable, sf, so, 1);
     },
     onColumnsChange: (config) => {
       state.columnsConfig = config;
@@ -139,37 +206,41 @@ function renderPagination() {
   const container = document.getElementById('paginationContainer');
   if (!container) return;
 
-  if (totalPages <= 1) {
-    container.innerHTML = '';
-    return;
+  // 新增记录按钮
+  let html = `<button type="button" class="btn-primary" id="addRecordBtn" style="height:32px;padding:0 16px;margin-right:auto;">+ 新增</button>`;
+
+  if (totalPages > 1) {
+    // 生成分页按钮
+    const pages = [];
+    pages.push({ label: '«', page: 1, title: '首页', disabled: page <= 1 });
+    pages.push({ label: '‹', page: page - 1, title: '上一页', disabled: page <= 1 });
+
+    // 中间页码，最多显示 5 个
+    let start = Math.max(1, page - 2);
+    let end = Math.min(totalPages, page + 2);
+    if (end - start < 4) {
+      if (start === 1) end = Math.min(totalPages, start + 4);
+      else if (end === totalPages) start = Math.max(1, end - 4);
+    }
+    for (let i = start; i <= end; i++) {
+      pages.push({ label: i, page: i, active: i === page });
+    }
+
+    pages.push({ label: '›', page: page + 1, title: '下一页', disabled: page >= totalPages });
+    pages.push({ label: '»', page: totalPages, title: '末页', disabled: page >= totalPages });
+
+    html += `<div class="pagination-info">第 ${page}/${totalPages} 页，共 ${total} 条</div>`;
+    html += '<div class="pagination-buttons">';
+    pages.forEach(p => {
+      const cls = p.active ? 'active' : (p.disabled ? 'disabled' : '');
+      html += `<button type="button" data-page="${p.page}" class="${cls}" title="${p.title || ''}">${p.label}</button>`;
+    });
+    html += '</div>';
+  } else {
+    // 少于1页，只显示总数和新增按钮
+    html += `<div class="pagination-info">共 ${total} 条</div>`;
   }
 
-  // 生成分页按钮
-  const pages = [];
-  pages.push({ label: '«', page: 1, title: '首页', disabled: page <= 1 });
-  pages.push({ label: '‹', page: page - 1, title: '上一页', disabled: page <= 1 });
-
-  // 中间页码，最多显示 5 个
-  let start = Math.max(1, page - 2);
-  let end = Math.min(totalPages, page + 2);
-  if (end - start < 4) {
-    if (start === 1) end = Math.min(totalPages, start + 4);
-    else if (end === totalPages) start = Math.max(1, end - 4);
-  }
-  for (let i = start; i <= end; i++) {
-    pages.push({ label: i, page: i, active: i === page });
-  }
-
-  pages.push({ label: '›', page: page + 1, title: '下一页', disabled: page >= totalPages });
-  pages.push({ label: '»', page: totalPages, title: '末页', disabled: page >= totalPages });
-
-  let html = `<div class="pagination-info">第 ${page}/${totalPages} 页，共 ${total} 条，每页 ${pageSize} 条</div>`;
-  html += '<div class="pagination-buttons">';
-  pages.forEach(p => {
-    const cls = p.active ? 'active' : (p.disabled ? 'disabled' : '');
-    html += `<button type="button" data-page="${p.page}" class="${cls}" title="${p.title || ''}">${p.label}</button>`;
-  });
-  html += '</div>';
   container.innerHTML = html;
 }
 
@@ -182,7 +253,7 @@ function onViewModeFull() {
 }
 
 function onViewModeCustom() {
-  // 面板由 ColumnManager 内部渲染，内部回调会触发 onColumnsConfigChange
+  // 面板由 ColumnManager 内部渲染
 }
 
 function onColumnsConfigChange(config) {
@@ -195,7 +266,7 @@ function getColumnsConfig() {
 }
 
 // ============================================================
-// 组件初始化（每个只执行一次）
+// 组件初始化
 // ============================================================
 
 // 连接表单
@@ -204,7 +275,6 @@ initConnection($conn, {
     state.tables = tables;
     state.connection.connected = true;
 
-    // 填充表列表
     const tableSelect = document.getElementById('tableSelect');
     const queryBtn = document.getElementById('queryBtn');
     if (tableSelect) {
@@ -218,7 +288,6 @@ initConnection($conn, {
       tableSelect.disabled = false;
       if (queryBtn) queryBtn.disabled = false;
 
-      // 恢复上次的表
       const cfg = loadConfig();
       if (cfg && cfg.tableName && tables.includes(cfg.tableName)) {
         tableSelect.value = cfg.tableName;
@@ -248,6 +317,12 @@ initColumnManager($colMgr, {
   onColumnsConfigChange
 });
 
+// CRUD 模态框
+initCrudModal({
+  onSuccess: onCrudSuccess,
+  onError: onCrudError
+});
+
 // ============================================================
 // 页面加载时自动恢复状态
 // ============================================================
@@ -264,7 +339,6 @@ initColumnManager($colMgr, {
     const dbResult = await dbResp.json();
     if (!dbResult.success) return;
 
-    // 填充数据库下拉框
     const databaseSelect = document.getElementById('database');
     if (databaseSelect) {
       databaseSelect.innerHTML = '<option value="">请选择数据库</option>';
@@ -285,7 +359,6 @@ initColumnManager($colMgr, {
       }
     }
 
-    // 自动连接
     const connResp = await fetch('http://localhost:3000/connect', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -294,7 +367,6 @@ initColumnManager($colMgr, {
     const connResult = await connResp.json();
     if (!connResult.success) return;
 
-    // 填充表列表
     const tableSelect = document.getElementById('tableSelect');
     const queryBtn = document.getElementById('queryBtn');
     if (tableSelect) {
@@ -319,5 +391,5 @@ initColumnManager($colMgr, {
   }
 })();
 
-// 确保分页事件处理器已绑定
+// 确保事件处理器已绑定
 ensurePaginationHandler();

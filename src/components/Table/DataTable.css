@@ -249,3 +249,58 @@ tbody tr:last-child td {
   opacity: 0.35;
   cursor: not-allowed;
 }
+
+/* ============================================================
+   操作列
+   ============================================================ */
+th.action-column {
+  width: 140px;
+  min-width: 140px;
+  max-width: 140px;
+  text-align: center;
+  cursor: default;
+  background: var(--primary-light);
+}
+
+th.action-column::after {
+  display: none;
+}
+
+td.action-cell {
+  text-align: center;
+  white-space: nowrap !important;
+}
+
+td.action-cell button {
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+td.action-cell .btn-edit {
+  background: var(--primary);
+  color: #fff;
+  margin-right: 6px;
+}
+
+td.action-cell .btn-edit:hover {
+  background: var(--primary-dark);
+}
+
+td.action-cell .btn-delete {
+  background: var(--danger);
+  color: #fff;
+}
+
+td.action-cell .btn-delete:hover {
+  background: #dc2626;
+}
+
+tbody tr:hover td.action-cell button {
+  transform: scale(1.02);
+}
+

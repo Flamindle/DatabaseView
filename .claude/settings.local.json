@@ -10,7 +10,9 @@
       "Bash(npm install:*)",
       "Bash(cd:*)",
       "Bash(npx vite:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(pip install:*)",
+      "Bash(python manage.py check)"
     ]
   }
 }

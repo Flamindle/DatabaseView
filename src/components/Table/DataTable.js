@@ -41,14 +41,24 @@ function buildTable(container, fields, data, config, callbacks = {}) {
       <span class="col-resizer"></span>
     </th>`;
   });
+  // 操作列
+  tableHtml += '<th class="action-column">操作</th>';
   tableHtml += '</tr>';
 
   // 数据行
   data.forEach(row => {
     tableHtml += '<tr>';
     effectiveFields.forEach(field => {
-      tableHtml += `<td>${row[field] || ''}</td>`;
+      tableHtml += `<td>${row[field] ?? ''}</td>`;
     });
+    // 操作按钮
+    const recordId = row.id ?? row.ID ?? Object.values(row)[0] ?? '';
+    const recordName = row.name ?? row.title ?? row.username ?? `#${recordId}`;
+    const recordData = encodeURIComponent(JSON.stringify(row));
+    tableHtml += `<td class="action-cell">
+      <button type="button" class="btn-edit" data-id="${recordId}" data-record="${recordData}" data-name="${recordName}" title="编辑">编辑</button>
+      <button type="button" class="btn-delete" data-id="${recordId}" data-name="${recordName}" title="删除">删除</button>
+    </td>`;
     tableHtml += '</tr>';
   });
   tableHtml += '</table></div>';

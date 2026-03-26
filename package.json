@@ -9,6 +9,8 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "concurrently \"node server/index.js\" \"vite\"",
+    "dev:all": "concurrently \"node server/index.js\" \"vite\" \"cd django_api && python manage.py runserver 9000\"",
+    "django": "cd django_api && python manage.py runserver 9000",
     "build": "vite build",
     "preview": "vite preview"
   },

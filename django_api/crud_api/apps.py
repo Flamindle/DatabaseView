@@ -1,0 +1,10 @@
+"""
+Django App 配置
+"""
+from django.apps import AppConfig
+
+
+class CrudApiConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'crud_api'
+    verbose_name = 'CRUD API'
