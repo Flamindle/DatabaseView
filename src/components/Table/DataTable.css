@@ -1,0 +1,116 @@
+/* 数据表格样式 */
+.table-selector {
+  margin-bottom: 20px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  max-height: 500px;
+  overflow-y: auto;
+  margin-top: 15px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 10px 14px;
+  border: 1px solid #ddd;
+  text-align: left;
+  white-space: nowrap;
+}
+
+th {
+  background-color: #f8f9fa;
+  font-weight: bold;
+  cursor: pointer;
+  user-select: none;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+th:hover {
+  background-color: #e9ecef;
+}
+
+th::after {
+  content: '';
+  margin-left: 5px;
+  font-size: 0.8em;
+}
+
+th.asc::after {
+  content: '↑';
+  color: #007bff;
+}
+
+th.desc::after {
+  content: '↓';
+  color: #007bff;
+}
+
+/* 列宽拖拽条 */
+th .col-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  user-select: none;
+}
+
+th .col-resizer:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+tr:nth-child(even) {
+  background-color: #f8f9fa;
+}
+
+/* 首列固定 */
+th:first-child, td:first-child {
+  position: sticky;
+  left: 0;
+  background-color: #fff;
+  z-index: 5;
+  font-weight: 500;
+  border-right: 2px solid #ccc;
+}
+
+th:first-child {
+  background-color: #f8f9fa;
+  z-index: 15;
+}
+
+tr:nth-child(even) td:first-child {
+  background-color: #f8f9fa;
+}
+
+tr:hover td {
+  background-color: #fffde7;
+}
+
+tr:hover td:first-child {
+  background-color: #fffde7;
+}
+
+.column-count {
+  color: #666;
+  font-size: 14px;
+  margin-top: 10px;
+}
+
+.column-count.warning {
+  color: #856404;
+  background-color: #fff3cd;
+  padding: 8px 12px;
+  border-radius: 4px;
+  display: inline-block;
+}

@@ -1,0 +1,62 @@
+/* 字段面板样式 */
+.field-panel {
+  margin-top: 6px;
+  padding: 8px 10px;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  background-color: #fafafa;
+  font-size: 12px;
+}
+
+.field-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  color: #555;
+}
+
+.field-panel-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+}
+
+.field-chip {
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  background-color: #f0f0f0;
+  color: #555;
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.field-chip.active {
+  background-color: #007bff;
+  border-color: #007bff;
+  color: #fff;
+}
+
+.field-chip.inactive {
+  background-color: #fff;
+  color: #bbb;
+  border-color: #ddd;
+  text-decoration: line-through;
+}
+
+.panel-action-btn {
+  padding: 3px 10px;
+  font-size: 12px;
+  border-radius: 4px;
+  border: 1px solid #007bff;
+  background-color: #e7f1ff;
+  color: #0056b3;
+  cursor: pointer;
+}
+
+.panel-action-btn:hover {
+  background-color: #007bff;
+  color: #fff;
+}

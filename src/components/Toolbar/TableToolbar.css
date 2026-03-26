@@ -1,0 +1,26 @@
+/* 工具栏样式 */
+.table-tools {
+  margin-top: 10px;
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #555;
+}
+
+.table-tools button {
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 12px;
+  border: 1px solid #ccc;
+  background-color: #f8f9fa;
+  color: #333;
+  cursor: pointer;
+}
+
+.table-tools button.active {
+  background-color: #007bff;
+  color: #fff;
+  border-color: #007bff;
+}

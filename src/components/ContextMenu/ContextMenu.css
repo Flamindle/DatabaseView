@@ -1,0 +1,21 @@
+/* 右键菜单样式 */
+.header-context-menu {
+  position: fixed;
+  background: #fff;
+  border: 1px solid #ccc;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  border-radius: 4px;
+  z-index: 9999;
+  min-width: 140px;
+  font-size: 13px;
+}
+
+.header-context-menu div {
+  padding: 6px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.header-context-menu div:hover {
+  background-color: #f1f1f1;
+}

@@ -6,7 +6,10 @@
       "Bash(curl -X POST http://localhost:3000/get-databases -H \"Content-Type: application/json\" -d \"{\"\"host\"\":\"\"10.103.106.163\"\",\"\"port\"\":\"\"3306\"\",\"\"user\"\":\"\"root\"\",\"\"password\"\":\"\"\"\"}\")",
       "Bash(taskkill /PID 47812 /F)",
       "Bash(taskkill //PID 47812 //F)",
-      "Bash(npm start:*)"
+      "Bash(npm start:*)",
+      "Bash(npm install:*)",
+      "Bash(cd:*)",
+      "Bash(npx vite:*)"
     ]
   }
 }
