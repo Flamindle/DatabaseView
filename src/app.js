@@ -25,7 +25,8 @@ const state = {
   lastQueryResult: null,
   columnsConfig: [],
   sortField: '',
-  sortOrder: 'ASC'
+  sortOrder: 'ASC',
+  pagination: { page: 1, pageSize: 50, total: 0, totalPages: 0 }
 };
 
 // DOM 挂载点
@@ -33,6 +34,18 @@ const $conn = document.getElementById('connectionContainer');
 const $toolbar = document.getElementById('toolbarContainer');
 const $colMgr = document.getElementById('columnManagerContainer');
 const $data = document.getElementById('dataContainer');
+
+// ============================================================
+// 分页事件委托（一次性绑定）
+// ============================================================
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('#paginationContainer button[data-page]');
+  if (!btn || btn.classList.contains('disabled')) return;
+  const newPage = parseInt(btn.dataset.page);
+  if (!isNaN(newPage) && state.currentTable) {
+    doQuery(state.currentTable, state.sortField, state.sortOrder, newPage);
+  }
+});
 
 // ============================================================
 // 消息提示
@@ -48,25 +61,35 @@ function showMsg(text, isSuccess = true) {
 // ============================================================
 // 查询数据
 // ============================================================
-async function doQuery(tableName, sortField = '', sortOrder = 'ASC') {
+async function doQuery(tableName, sortField = '', sortOrder = 'ASC', page = 1) {
   if (!tableName) return;
+
+  state.pagination.page = page;
 
   try {
     const resp = await fetch('http://localhost:3000/query-table', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tableName, sortField, sortOrder })
+      body: JSON.stringify({
+        tableName,
+        sortField,
+        sortOrder,
+        page,
+        pageSize: state.pagination.pageSize
+      })
     });
     const result = await resp.json();
 
     if (result.success) {
       const tip = sortField ? `，按${sortField}${sortOrder === 'ASC' ? '升序' : '降序'}` : '';
-      showMsg(`查询成功，共 ${result.data.length} 条记录${tip}`);
+      showMsg(`查询成功，第 ${result.pagination.page}/${result.pagination.totalPages} 页，共 ${result.pagination.total} 条记录${tip}`);
       state.lastQueryResult = { fields: result.fields, data: result.data };
       state.columnsConfig = result.fields.map(name => ({ key: name, visible: true }));
       state.sortField = sortField;
       state.sortOrder = sortOrder;
+      state.pagination = result.pagination;
       renderTable();
+      renderPagination();
     } else {
       showMsg(result.message, false);
       $data.innerHTML = '';
@@ -87,13 +110,55 @@ function renderTable() {
     onSortChange: (sf, so) => {
       state.sortField = sf;
       state.sortOrder = so;
-      doQuery(state.currentTable, sf, so);
+      doQuery(state.currentTable, sf, so, 1); // 排序从第1页开始
     },
     onColumnsChange: (config) => {
       state.columnsConfig = config;
       renderTable();
     }
   });
+}
+
+// ============================================================
+// 渲染分页控件
+// ============================================================
+function renderPagination() {
+  const { page, pageSize, total, totalPages } = state.pagination;
+  const container = document.getElementById('paginationContainer');
+  if (!container) return;
+
+  if (totalPages <= 1) {
+    container.innerHTML = '';
+    return;
+  }
+
+  // 生成分页按钮
+  const pages = [];
+  pages.push({ label: '«', page: 1, title: '首页', disabled: page <= 1 });
+  pages.push({ label: '‹', page: page - 1, title: '上一页', disabled: page <= 1 });
+
+  // 中间页码，最多显示 5 个
+  let start = Math.max(1, page - 2);
+  let end = Math.min(totalPages, page + 2);
+  if (end - start < 4) {
+    if (start === 1) end = Math.min(totalPages, start + 4);
+    else if (end === totalPages) start = Math.max(1, end - 4);
+  }
+  for (let i = start; i <= end; i++) {
+    pages.push({ label: i, page: i, active: i === page });
+  }
+
+  pages.push({ label: '›', page: page + 1, title: '下一页', disabled: page >= totalPages });
+  pages.push({ label: '»', page: totalPages, title: '末页', disabled: page >= totalPages });
+
+  let html = `<div class="pagination-info">第 ${page}/${totalPages} 页，共 ${total} 条，每页 ${pageSize} 条</div>`;
+  html += '<div class="pagination-buttons">';
+  pages.forEach(p => {
+    const cls = p.active ? 'active' : (p.disabled ? 'disabled' : '');
+    html += `<button type="button" data-page="${p.page}" class="${cls}" title="${p.title || ''}">${p.label}</button>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
 }
 
 // ============================================================
