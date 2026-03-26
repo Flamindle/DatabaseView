@@ -32,8 +32,9 @@ function buildTable(container, fields, data, config, callbacks = {}) {
   const isWideTable = effectiveFields.length > 5;
   let tableHtml = `<div class="table-wrapper"><table>`;
 
-  // 表头
+  // 表头 - 操作列在最前面
   tableHtml += '<tr>';
+  tableHtml += '<th class="action-column">操作</th>';
   effectiveFields.forEach(field => {
     const sortClass = field === currentSortField ? currentSortOrder.toLowerCase() : '';
     tableHtml += `<th class="${sortClass}" data-field="${field}" draggable="true">
@@ -41,17 +42,12 @@ function buildTable(container, fields, data, config, callbacks = {}) {
       <span class="col-resizer"></span>
     </th>`;
   });
-  // 操作列
-  tableHtml += '<th class="action-column">操作</th>';
   tableHtml += '</tr>';
 
-  // 数据行
+  // 数据行 - 操作列在最前面
   data.forEach((row, index) => {
     tableHtml += '<tr>';
-    effectiveFields.forEach(field => {
-      tableHtml += `<td>${row[field] ?? ''}</td>`;
-    });
-    // 操作按钮 - 使用行索引作为备选标识
+    // 操作按钮
     const recordId = row.id ?? row.ID ?? row.Id ?? index + 1;
     const recordName = row.name ?? row.title ?? row.username ?? `#${recordId}`;
     const recordData = encodeURIComponent(JSON.stringify(row));
@@ -59,6 +55,9 @@ function buildTable(container, fields, data, config, callbacks = {}) {
       <button type="button" class="btn-edit" data-id="${recordId}" data-record="${recordData}" data-name="${recordName}" title="编辑">编辑</button>
       <button type="button" class="btn-delete" data-id="${recordId}" data-name="${recordName}" title="删除">删除</button>
     </td>`;
+    effectiveFields.forEach(field => {
+      tableHtml += `<td>${row[field] ?? ''}</td>`;
+    });
     tableHtml += '</tr>';
   });
   tableHtml += '</table></div>';
