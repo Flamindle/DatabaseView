@@ -12,7 +12,7 @@ const { formatChinaTime } = require('../utils/formatter');
  * 查询表数据，支持分页、排序和时间格式化
  */
 router.post('/query-table', (req, res) => {
-  const { tableName, sortField, sortOrder, page = 1, pageSize = 50 } = req.body;
+  const { tableName, sortField, sortOrder, page = 1, pageSize = 100 } = req.body;
   const conn = getConn();
 
   if (!conn) {

@@ -4,27 +4,35 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MySQL 数据库查看器</title>
-  <script type="module" crossorigin src="/assets/index-BkKP-rmT.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-DQ1KUOrG.css">
+  <script type="module" crossorigin src="/assets/index-DxvM6D8h.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-CkzqbssN.css">
 </head>
 <body>
   <div class="container">
-    <h1>MySQL 数据库查看器</h1>
+    <h1 style="display:flex;align-items:center;gap:16px;">
+      MySQL 数据库查看器
+      <button id="themeToggle" style="height:32px;padding:0 16px;border-radius:20px;border:none;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(102,126,234,0.4);" title="切换主题">浅色</button>
+    </h1>
 
-    <!-- 连接表单 -->
-    <div id="connectionContainer"></div>
+    <!-- 连接表单卡片 -->
+    <div class="card" id="connectionCard">
+      <div id="connectionContainer"></div>
+    </div>
 
-    <!-- 表格工具栏 -->
-    <div id="toolbarContainer"></div>
+    <!-- 工具栏 + 字段配置卡片 -->
+    <div class="card" id="dataCard">
+      <!-- 表格工具栏 -->
+      <div id="toolbarContainer"></div>
 
-    <!-- 字段配置面板 -->
-    <div id="columnManagerContainer"></div>
+      <!-- 字段配置面板 -->
+      <div id="columnManagerContainer"></div>
 
-    <!-- 数据展示区域 -->
-    <div id="dataContainer"></div>
+      <!-- 数据展示区域 -->
+      <div id="dataContainer"></div>
 
-    <!-- 分页控件 -->
-    <div id="paginationContainer"></div>
+      <!-- 分页控件 -->
+      <div id="paginationContainer"></div>
+    </div>
   </div>
 
 </body>

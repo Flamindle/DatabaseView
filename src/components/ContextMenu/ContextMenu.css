@@ -1,21 +1,53 @@
-/* 右键菜单样式 */
+/* ============================================================
+   右键菜单
+   ============================================================ */
 .header-context-menu {
   position: fixed;
-  background: #fff;
-  border: 1px solid #ccc;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-  border-radius: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  border-radius: var(--radius-sm);
   z-index: 9999;
-  min-width: 140px;
-  font-size: 13px;
+  min-width: 160px;
+  overflow: hidden;
+  animation: fadeIn 0.12s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .header-context-menu div {
-  padding: 6px 12px;
+  padding: 9px 16px;
   cursor: pointer;
-  white-space: nowrap;
+  font-size: 13px;
+  color: var(--text);
+  transition: background 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-context-menu div::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex-shrink: 0;
 }
 
 .header-context-menu div:hover {
-  background-color: #f1f1f1;
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.header-context-menu div:hover::before {
+  background: var(--primary);
+}
+
+.header-context-menu div + div {
+  border-top: 1px solid var(--border);
 }

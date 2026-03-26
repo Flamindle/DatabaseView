@@ -1,73 +1,245 @@
-/* 全局基础样式 */
+/* ============================================================
+   全局基础样式
+   ============================================================ */
+:root {
+  --primary: #4f6ef7;
+  --primary-dark: #3a57e8;
+  --primary-light: #eef1fe;
+  --success: #22c55e;
+  --success-bg: #f0fdf4;
+  --success-text: #166534;
+  --danger: #ef4444;
+  --danger-bg: #fef2f2;
+  --danger-text: #991b1b;
+  --warning: #f59e0b;
+  --bg: #f0f2f5;
+  --surface: #ffffff;
+  --text: #1e293b;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.05);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.06);
+  --radius: 10px;
+  --radius-sm: 6px;
+}
+
+/* 深色主题 */
+[data-theme="dark"] {
+  --primary: #6b8aff;
+  --primary-dark: #8ba8ff;
+  --primary-light: #1e2a4a;
+  --success: #4ade80;
+  --success-bg: rgba(74, 222, 128, 0.1);
+  --success-text: #4ade80;
+  --danger: #f87171;
+  --danger-bg: rgba(248, 113, 113, 0.1);
+  --danger-text: #f87171;
+  --warning: #fbbf24;
+  --bg: #0f172a;
+  --surface: #1e293b;
+  --text: #e2e8f0;
+  --text-muted: #94a3b8;
+  --border: #334155;
+  --shadow: 0 1px 3px rgba(0,0,0,0.4), 0 4px 12px rgba(0,0,0,0.3);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.3);
+}
+
+/* 绿色护眼主题 */
+[data-theme="green"] {
+  --primary: #22c55e;
+  --primary-dark: #16a34a;
+  --primary-light: #dcfce7;
+  --success: #16a34a;
+  --success-bg: #dcfce7;
+  --success-text: #14532d;
+  --danger: #ef4444;
+  --danger-bg: #fef2f2;
+  --danger-text: #991b1b;
+  --warning: #f59e0b;
+  --bg: #f0fdf4;
+  --surface: #ffffff;
+  --text: #14532d;
+  --text-muted: #16a34a;
+  --border: #bbf7d0;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.05);
+}
+
+/* 粉色主题 */
+[data-theme="pink"] {
+  --primary: #ec4899;
+  --primary-dark: #db2777;
+  --primary-light: #fdf2f8;
+  --success: #22c55e;
+  --success-bg: #fdf2f8;
+  --success-text: #166534;
+  --danger: #ef4444;
+  --danger-bg: #fef2f2;
+  --danger-text: #991b1b;
+  --warning: #f59e0b;
+  --bg: #fdf2f8;
+  --surface: #ffffff;
+  --text: #831843;
+  --text-muted: #be185d;
+  --border: #f9a8d4;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.05);
+}
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', sans-serif;
+  font-size: 14px;
+  color: var(--text);
 }
 
 body {
-  max-width: 1200px;
-  margin: 20px auto;
-  padding: 0 20px;
-  background-color: #f5f5f5;
+  background: var(--bg);
+  min-height: 100vh;
+  transition: background 0.3s ease;
 }
 
 .container {
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  max-width: 1400px;
+  margin: 24px auto;
+  padding: 0 24px;
 }
 
+/* ============================================================
+   标题
+   ============================================================ */
+h1 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 20px;
+  letter-spacing: -0.3px;
+}
+
+h1::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 22px;
+  background: var(--primary);
+  border-radius: 2px;
+  margin-right: 10px;
+  vertical-align: -4px;
+}
+
+/* ============================================================
+   卡片容器
+   ============================================================ */
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px 24px;
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+/* ============================================================
+   表单元素
+   ============================================================ */
 label {
   display: inline-block;
-  width: 100px;
-  font-weight: bold;
+  font-weight: 500;
+  color: var(--text);
+  margin-right: 8px;
 }
 
 input, select {
-  padding: 8px 10px;
-  width: 300px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  padding: 8px 12px;
+  width: 240px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface);
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.3s ease;
+  outline: none;
 }
 
+input:focus, select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+input::placeholder {
+  color: var(--text-muted);
+}
+
+/* ============================================================
+   按钮
+   ============================================================ */
 button {
-  padding: 10px 20px;
-  background-color: #007bff;
-  color: white;
+  padding: 8px 18px;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  margin-right: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+  outline: none;
 }
 
-button:hover {
-  background-color: #0056b3;
+button:active {
+  transform: translateY(1px);
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+}
+.btn-primary:hover {
+  background: var(--primary-dark);
+  box-shadow: 0 2px 8px rgba(79,110,247,0.35);
+}
+
+.btn-secondary {
+  background: var(--surface);
+  color: var(--text);
+  border: 1.5px solid var(--border);
+}
+.btn-secondary:hover {
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 button:disabled {
-  background-color: #6c757d;
+  opacity: 0.45;
   cursor: not-allowed;
+  transform: none !important;
 }
 
+/* ============================================================
+   消息提示
+   ============================================================ */
 .message {
-  margin: 15px 0;
-  padding: 10px;
-  border-radius: 4px;
+  margin-top: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  border-left: 3px solid;
 }
-
 .message.success {
-  background-color: #d4edda;
-  color: #155724;
+  background: var(--success-bg);
+  color: var(--success-text);
+  border-left-color: var(--success);
 }
-
 .message.error {
-  background-color: #f8d7da;
-  color: #721c24;
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border-left-color: var(--danger);
 }
 
+/* ============================================================
+   辅助类
+   ============================================================ */
 .hidden {
   display: none;
 }

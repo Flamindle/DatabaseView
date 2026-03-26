@@ -22,32 +22,36 @@ function init(container, callbacks = {}) {
   container.innerHTML = `
     <div class="connection-form">
       <div class="form-group">
-        <label>主机地址：</label>
+        <label>主机地址</label>
         <input type="text" id="host" value="localhost" placeholder="例如：127.0.0.1">
       </div>
       <div class="form-group">
-        <label>端口号：</label>
+        <label>端口号</label>
         <input type="number" id="port" value="3306" placeholder="默认3306">
       </div>
       <div class="form-group">
-        <label>用户名：</label>
+        <label>用户名</label>
         <input type="text" id="user" value="root" placeholder="例如：root">
       </div>
       <div class="form-group">
-        <label>密码：</label>
+        <label>密码</label>
         <input type="password" id="password" placeholder="数据库密码">
       </div>
       <div class="form-group">
-        <label>数据库名：</label>
-        <button type="button" id="getDbBtn">获取数据库列表</button>
-        <select id="database" disabled>
-          <option value="">请先获取数据库列表</option>
-        </select>
+        <label>数据库</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button type="button" class="btn-secondary" id="getDbBtn">获取列表</button>
+          <select id="database" disabled>
+            <option value="">请先获取数据库</option>
+          </select>
+        </div>
       </div>
-      <button type="button" id="connectBtn" disabled>连接数据库</button>
-      <button type="button" id="disconnectBtn" disabled>断开连接</button>
-      <div id="message" class="message hidden"></div>
+      <div class="form-actions">
+        <button type="button" class="btn-primary" id="connectBtn" disabled>连接</button>
+        <button type="button" class="btn-secondary" id="disconnectBtn" disabled>断开</button>
+      </div>
     </div>
+    <div id="message" class="message hidden"></div>
   `;
 
   // 获取元素引用

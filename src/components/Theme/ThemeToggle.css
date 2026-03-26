@@ -1,0 +1,15 @@
+/* ============================================================
+   主题切换按钮
+   ============================================================ */
+.theme-toggle-btn {
+  transition: all 0.2s ease;
+}
+
+.theme-toggle-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5) !important;
+}
+
+.theme-toggle-btn:active {
+  transform: scale(0.95);
+}

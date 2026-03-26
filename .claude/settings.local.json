@@ -9,7 +9,8 @@
       "Bash(npm start:*)",
       "Bash(npm install:*)",
       "Bash(cd:*)",
-      "Bash(npx vite:*)"
+      "Bash(npx vite:*)",
+      "Bash(npm run:*)"
     ]
   }
 }

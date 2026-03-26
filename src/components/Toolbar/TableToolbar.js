@@ -19,11 +19,11 @@ function init(container, cbs) {
 
   container.innerHTML = `
     <div class="table-selector" id="tableSection">
-      <label>选择数据表：</label>
+      <label>选择数据表</label>
       <select id="tableSelect">
         <option value="">请选择表</option>
       </select>
-      <button type="button" id="queryBtn" disabled>查询数据</button>
+      <button type="button" class="btn-primary" id="queryBtn" disabled>查询</button>
     </div>
   `;
 

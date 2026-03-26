@@ -8,10 +8,12 @@ import './components/Table/DataTable.css';
 import './components/Toolbar/TableToolbar.css';
 import './components/FieldPanel/FieldPanel.css';
 import './components/ContextMenu/ContextMenu.css';
+import './components/Theme/ThemeToggle.css';
 
 import { init as initConnection } from './components/Connection/ConnectionForm.js';
 import { init as initToolbar } from './components/Toolbar/TableToolbar.js';
 import { init as initColumnManager } from './components/Table/ColumnManager.js';
+import { init as initTheme } from './components/Theme/ThemeToggle.js';
 import { buildTable } from './components/Table/DataTable.js';
 import { loadConfig, saveConfig } from './utils/storage.js';
 
@@ -26,7 +28,7 @@ const state = {
   columnsConfig: [],
   sortField: '',
   sortOrder: 'ASC',
-  pagination: { page: 1, pageSize: 50, total: 0, totalPages: 0 }
+  pagination: { page: 1, pageSize: 100, total: 0, totalPages: 0 }
 };
 
 // DOM 挂载点
@@ -35,17 +37,27 @@ const $toolbar = document.getElementById('toolbarContainer');
 const $colMgr = document.getElementById('columnManagerContainer');
 const $data = document.getElementById('dataContainer');
 
+// 初始化主题切换
+initTheme();
+
+
 // ============================================================
-// 分页事件委托（一次性绑定）
+// 分页点击（document 事件委托，防止 HMR 后失效）
 // ============================================================
-document.addEventListener('click', (e) => {
-  const btn = e.target.closest('#paginationContainer button[data-page]');
-  if (!btn || btn.classList.contains('disabled')) return;
-  const newPage = parseInt(btn.dataset.page);
-  if (!isNaN(newPage) && state.currentTable) {
-    doQuery(state.currentTable, state.sortField, state.sortOrder, newPage);
-  }
-});
+let paginationHandlerActive = false;
+
+function ensurePaginationHandler() {
+  if (paginationHandlerActive) return;
+  paginationHandlerActive = true;
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('#paginationContainer button[data-page]');
+    if (!btn || btn.classList.contains('disabled')) return;
+    const newPage = parseInt(btn.dataset.page);
+    if (!isNaN(newPage) && state.currentTable) {
+      doQuery(state.currentTable, state.sortField, state.sortOrder, newPage);
+    }
+  });
+}
 
 // ============================================================
 // 消息提示
@@ -306,3 +318,6 @@ initColumnManager($colMgr, {
     // 静默失败
   }
 })();
+
+// 确保分页事件处理器已绑定
+ensurePaginationHandler();
