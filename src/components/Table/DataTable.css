@@ -16,13 +16,25 @@ table {
   width: max-content;
   min-width: 100%;
   border-collapse: collapse;
+  /* 表格最大宽度：约 40 字符宽度（参考 "android.hardware.memtrack-service.example"） */
+  max-width: 350px;
 }
 
 th, td {
   padding: 10px 14px;
   border: 1px solid #ddd;
   text-align: left;
+  /* 单元格最大宽度，防止字段名过长时列宽无限撑开 */
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+th:hover, td:hover {
+  /* 悬停时显示完整内容（鼠标提示） */
+  white-space: normal;
+  word-break: break-all;
 }
 
 th {
