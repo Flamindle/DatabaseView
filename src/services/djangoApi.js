@@ -3,6 +3,7 @@
  * 用于数据库记录的增删改操作
  */
 const DJANGO_BASE_URL = 'http://localhost:9000/api';
+const STORAGE_KEY = 'mysql_viewer_config';
 
 /**
  * 获取请求头
@@ -11,10 +12,23 @@ function getHeaders() {
   const headers = {
     'Content-Type': 'application/json'
   };
-  // 从 localStorage 获取当前数据库名
-  const config = JSON.parse(localStorage.getItem('dbview-config') || '{}');
+  // 从 localStorage 获取当前数据库连接配置
+  const config = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+  console.log('[Django API] 读取配置:', config);
   if (config.database) {
     headers['X-Database-Name'] = config.database;
+  }
+  if (config.host) {
+    headers['X-DB-Host'] = config.host;
+  }
+  if (config.port) {
+    headers['X-DB-Port'] = config.port;
+  }
+  if (config.user) {
+    headers['X-DB-User'] = config.user;
+  }
+  if (config.password !== undefined) {
+    headers['X-DB-Password'] = config.password || '';
   }
   return headers;
 }

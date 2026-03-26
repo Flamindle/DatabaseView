@@ -17,7 +17,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-dev-key-change-in-producti
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 INSTALLED_APPS = [
@@ -52,28 +52,13 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# Database - 默认配置，数据库名可以动态切换
+# Database - Django 内部使用 SQLite（不需要 MySQL）
+# 用户的数据库连接配置通过请求头动态传递
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.getenv('DB_NAME', 'mysql'),  # 默认连接到 mysql 系统库
-        'USER': os.getenv('DB_USER', 'root'),
-        'PASSWORD': os.getenv('DB_PASSWORD', ''),
-        'HOST': os.getenv('DB_HOST', 'localhost'),
-        'PORT': os.getenv('DB_PORT', '3306'),
-        'OPTIONS': {
-            'charset': 'utf8mb4',
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-        },
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
-}
-
-# 默认数据库配置（用于初始化连接）
-DEFAULT_DB_CONFIG = {
-    'host': os.getenv('DB_HOST', 'localhost'),
-    'port': os.getenv('DB_PORT', '3306'),
-    'user': os.getenv('DB_USER', 'root'),
-    'password': os.getenv('DB_PASSWORD', ''),
 }
 
 # Internationalization
@@ -123,7 +108,7 @@ CORS_ALLOW_METHODS = [
     'OPTIONS',
 ]
 
-# 允许的请求头
+# 允许的请求头（包含数据库配置头）
 CORS_ALLOW_HEADERS = [
     'accept',
     'accept-encoding',
@@ -132,4 +117,9 @@ CORS_ALLOW_HEADERS = [
     'origin',
     'user-agent',
     'x-requested-with',
+    'x-database-name',
+    'x-db-host',
+    'x-db-port',
+    'x-db-user',
+    'x-db-password',
 ]

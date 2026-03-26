@@ -2,16 +2,8 @@
 工具函数
 """
 import re
+import mysql.connector
 from django.http import JsonResponse
-from django.db import connection, connections
-
-
-def switch_database(db_name):
-    """
-    动态切换默认数据库
-    """
-    if db_name:
-        connections['default'].settings_dict['NAME'] = db_name
 
 
 def validate_table_name(table_name):
@@ -34,56 +26,67 @@ def validate_field_name(field_name):
     return bool(re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', field_name))
 
 
-def execute_query(sql, params=None, db_name=None):
+def get_db_connection(db_config):
+    """
+    创建数据库连接
+    db_config: {host, port, user, password, database}
+    """
+    return mysql.connector.connect(
+        host=db_config.get('host', 'localhost'),
+        port=int(db_config.get('port', 3306)),
+        user=db_config.get('user', 'root'),
+        password=db_config.get('password', ''),
+        database=db_config.get('database', ''),
+        charset='utf8mb4'
+    )
+
+
+def execute_query(conn, sql, params=None):
     """
     执行查询并返回结果
     """
-    if db_name:
-        switch_database(db_name)
+    cursor = conn.cursor()
+    cursor.execute(sql, params or ())
+    if cursor.description is None:
+        cursor.close()
+        return []
+    columns = [col[0] for col in cursor.description]
+    rows = cursor.fetchall()
+    cursor.close()
+    return [dict(zip(columns, row)) for row in rows]
 
-    with connection.cursor() as cursor:
-        cursor.execute(sql, params)
-        if cursor.description is None:
-            return []
-        columns = [col[0] for col in cursor.description]
-        rows = cursor.fetchall()
-        return [dict(zip(columns, row)) for row in rows]
 
-
-def execute_write(sql, params=None, db_name=None):
+def execute_write(conn, sql, params=None):
     """
-    执行写操作并返回影响的行数
+    执行写操作并返回影响的行数和最后插入ID
     """
-    if db_name:
-        switch_database(db_name)
+    cursor = conn.cursor()
+    cursor.execute(sql, params or ())
+    conn.commit()
+    rowcount = cursor.rowcount
+    lastid = cursor.lastrowid
+    cursor.close()
+    return rowcount, lastid
 
-    with connection.cursor() as cursor:
-        cursor.execute(sql, params)
-        return cursor.rowcount, cursor.lastrowid
 
-
-def get_table_schema(table_name, db_name=None):
+def get_table_schema(conn, table_name):
     """
     获取表结构信息
     """
-    if db_name:
-        switch_database(db_name)
-
     sql = """
         SELECT
             COLUMN_NAME as name,
             DATA_TYPE as type,
             IS_NULLABLE as nullable,
-            COLUMN_KEY as key,
+            COLUMN_KEY as key_type,
             COLUMN_DEFAULT as default_value,
-            COLUMN_COMMENT as comment,
             CHARACTER_MAXIMUM_LENGTH as max_length
         FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_SCHEMA = DATABASE()
         AND TABLE_NAME = %s
         ORDER BY ORDINAL_POSITION
     """
-    return execute_query(sql, [table_name], db_name)
+    return execute_query(conn, sql, (table_name,))
 
 
 def success_response(message, data=None, status=200):

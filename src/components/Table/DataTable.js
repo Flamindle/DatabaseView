@@ -46,13 +46,13 @@ function buildTable(container, fields, data, config, callbacks = {}) {
   tableHtml += '</tr>';
 
   // 数据行
-  data.forEach(row => {
+  data.forEach((row, index) => {
     tableHtml += '<tr>';
     effectiveFields.forEach(field => {
       tableHtml += `<td>${row[field] ?? ''}</td>`;
     });
-    // 操作按钮
-    const recordId = row.id ?? row.ID ?? Object.values(row)[0] ?? '';
+    // 操作按钮 - 使用行索引作为备选标识
+    const recordId = row.id ?? row.ID ?? row.Id ?? index + 1;
     const recordName = row.name ?? row.title ?? row.username ?? `#${recordId}`;
     const recordData = encodeURIComponent(JSON.stringify(row));
     tableHtml += `<td class="action-cell">

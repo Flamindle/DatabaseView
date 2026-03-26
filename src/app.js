@@ -114,14 +114,19 @@ function ensurePaginationHandler() {
 async function handleDelete(recordId) {
   if (!state.currentTable) return;
 
+  console.log('开始删除记录:', recordId, '表:', state.currentTable);
+
   try {
     const result = await deleteRecord(state.currentTable, recordId);
+    console.log('删除结果:', result);
     if (result.success) {
       onCrudSuccess('删除成功');
     } else {
       onCrudError(result.message);
     }
   } catch (err) {
+    console.error('删除请求失败:', err);
+    onCrudError(`删除失败: ${err.message}`);
     onCrudError(`删除失败: ${err.message}`);
   }
 }

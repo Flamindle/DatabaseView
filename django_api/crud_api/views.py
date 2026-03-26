@@ -3,25 +3,33 @@ CRUD API 视图
 实现数据库记录的增删改操作
 """
 import json
-import re
+import mysql.connector
 from django.http import JsonResponse
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from django.db import connection
 
 from .utils import (
     validate_table_name,
     validate_field_name,
-    switch_database,
+    get_db_connection,
+    execute_query,
+    execute_write,
+    get_table_schema,
     success_response,
     error_response,
 )
 
 
-def get_db_name(request):
-    """从请求头获取数据库名称"""
-    return request.headers.get('X-Database-Name', None)
+def get_db_config(request):
+    """从请求头获取数据库连接配置"""
+    return {
+        'database': request.headers.get('X-Database-Name', ''),
+        'host': request.headers.get('X-DB-Host', 'localhost'),
+        'port': request.headers.get('X-DB-Port', '3306'),
+        'user': request.headers.get('X-DB-User', 'root'),
+        'password': request.headers.get('X-DB-Password', ''),
+    }
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -37,9 +45,14 @@ class TableRecordsView(View):
         if not validate_table_name(table_name):
             return error_response('无效的表名')
 
-        db_name = get_db_name(request)
-        if db_name:
-            switch_database(db_name)
+        db_config = get_db_config(request)
+        if not db_config['database']:
+            return error_response('请先连接数据库')
+
+        try:
+            conn = get_db_connection(db_config)
+        except mysql.connector.Error as e:
+            return error_response(f'数据库连接失败: {str(e)}')
 
         try:
             data = json.loads(request.body)
@@ -58,64 +71,56 @@ class TableRecordsView(View):
             placeholders = ', '.join(['%s'] * len(record_data))
             sql = f"INSERT INTO `{table_name}` ({fields}) VALUES ({placeholders})"
 
-            # 执行插入
-            with connection.cursor() as cursor:
-                cursor.execute(sql, list(record_data.values()))
-                insert_id = cursor.lastrowid
+            rowcount, insert_id = execute_write(conn, sql, list(record_data.values()))
 
-                # 获取刚插入的记录
-                cursor.execute(f"SELECT * FROM `{table_name}` WHERE id = %s", [insert_id])
-                columns = [col[0] for col in cursor.description]
-                row = cursor.fetchone()
-                record = dict(zip(columns, row)) if row else {}
+            # 获取刚插入的记录
+            cursor = conn.cursor()
+            cursor.execute(f"SELECT * FROM `{table_name}` WHERE id = %s", (insert_id,))
+            columns = [col[0] for col in cursor.description]
+            row = cursor.fetchone()
+            cursor.close()
+            record = dict(zip(columns, row)) if row else {}
 
+            conn.close()
             return success_response('记录创建成功', record)
 
         except json.JSONDecodeError:
             return error_response('无效的 JSON 格式')
         except Exception as e:
             return error_response(f'创建记录失败: {str(e)}')
+        finally:
+            if conn:
+                conn.close()
 
     def get(self, request, table_name):
-        """获取表结构和记录"""
+        """获取表结构和示例数据"""
         if not validate_table_name(table_name):
             return error_response('无效的表名')
 
-        db_name = get_db_name(request)
-        if db_name:
-            switch_database(db_name)
+        db_config = get_db_config(request)
+        if not db_config['database']:
+            return error_response('请先连接数据库')
 
         try:
-            # 获取表结构
-            schema_sql = """
-                SELECT
-                    COLUMN_NAME as name,
-                    DATA_TYPE as type,
-                    IS_NULLABLE as nullable,
-                    COLUMN_KEY as key_type,
-                    COLUMN_DEFAULT as default_value,
-                    CHARACTER_MAXIMUM_LENGTH as max_length
-                FROM INFORMATION_SCHEMA.COLUMNS
-                WHERE TABLE_SCHEMA = DATABASE()
-                AND TABLE_NAME = %s
-                ORDER BY ORDINAL_POSITION
-            """
+            conn = get_db_connection(db_config)
+        except mysql.connector.Error as e:
+            return error_response(f'数据库连接失败: {str(e)}')
 
-            with connection.cursor() as cursor:
-                cursor.execute(schema_sql, [table_name])
-                schema_columns = [col[0] for col in cursor.description]
-                schema_rows = cursor.fetchall()
-                schema = [dict(zip(schema_columns, row)) for row in schema_rows]
+        try:
+            schema = get_table_schema(conn, table_name)
 
-                # 获取前几条记录作为示例
-                cursor.execute(f"SELECT * FROM `{table_name}` LIMIT 5")
-                if cursor.description:
-                    data_columns = [col[0] for col in cursor.description]
-                    data_rows = cursor.fetchall()
-                    sample_data = [dict(zip(data_columns, row)) for row in data_rows]
-                else:
-                    sample_data = []
+            # 获取前几条记录作为示例
+            cursor = conn.cursor()
+            cursor.execute(f"SELECT * FROM `{table_name}` LIMIT 5")
+            if cursor.description:
+                columns = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                sample_data = [dict(zip(columns, row)) for row in rows]
+            else:
+                sample_data = []
+            cursor.close()
 
+            conn.close()
             return success_response('表结构获取成功', {
                 'schema': schema,
                 'sample_data': sample_data
@@ -123,6 +128,9 @@ class TableRecordsView(View):
 
         except Exception as e:
             return error_response(f'获取表结构失败: {str(e)}')
+        finally:
+            if conn:
+                conn.close()
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -139,33 +147,48 @@ class RecordDetailView(View):
         if not validate_table_name(table_name):
             return error_response('无效的表名')
 
-        db_name = get_db_name(request)
-        if db_name:
-            switch_database(db_name)
+        db_config = get_db_config(request)
+        if not db_config['database']:
+            return error_response('请先连接数据库')
 
         try:
-            with connection.cursor() as cursor:
-                cursor.execute(f"SELECT * FROM `{table_name}` WHERE id = %s", [record_id])
-                columns = [col[0] for col in cursor.description]
-                row = cursor.fetchone()
+            conn = get_db_connection(db_config)
+        except mysql.connector.Error as e:
+            return error_response(f'数据库连接失败: {str(e)}')
 
-                if not row:
-                    return error_response('记录不存在', status=404)
+        try:
+            cursor = conn.cursor()
+            cursor.execute(f"SELECT * FROM `{table_name}` WHERE id = %s", (record_id,))
+            columns = [col[0] for col in cursor.description]
+            row = cursor.fetchone()
+            cursor.close()
+            conn.close()
 
-                record = dict(zip(columns, row))
-                return success_response('记录获取成功', record)
+            if not row:
+                return error_response('记录不存在', status=404)
+
+            record = dict(zip(columns, row))
+            return success_response('记录获取成功', record)
 
         except Exception as e:
             return error_response(f'获取记录失败: {str(e)}')
+        finally:
+            if conn:
+                conn.close()
 
     def put(self, request, table_name, record_id):
         """更新记录"""
         if not validate_table_name(table_name):
             return error_response('无效的表名')
 
-        db_name = get_db_name(request)
-        if db_name:
-            switch_database(db_name)
+        db_config = get_db_config(request)
+        if not db_config['database']:
+            return error_response('请先连接数据库')
+
+        try:
+            conn = get_db_connection(db_config)
+        except mysql.connector.Error as e:
+            return error_response(f'数据库连接失败: {str(e)}')
 
         try:
             data = json.loads(request.body)
@@ -182,19 +205,21 @@ class RecordDetailView(View):
             # 构建 UPDATE 语句
             set_clause = ', '.join([f"`{k}` = %s" for k in record_data.keys()])
             sql = f"UPDATE `{table_name}` SET {set_clause} WHERE id = %s"
-
             params = list(record_data.values()) + [record_id]
 
-            with connection.cursor() as cursor:
-                cursor.execute(sql, params)
-                if cursor.rowcount == 0:
-                    return error_response('记录不存在或未做任何修改', status=404)
+            rowcount, _ = execute_write(conn, sql, params)
 
-                # 获取更新后的记录
-                cursor.execute(f"SELECT * FROM `{table_name}` WHERE id = %s", [record_id])
-                columns = [col[0] for col in cursor.description]
-                row = cursor.fetchone()
-                record = dict(zip(columns, row)) if row else {}
+            if rowcount == 0:
+                return error_response('记录不存在或未做任何修改', status=404)
+
+            # 获取更新后的记录
+            cursor = conn.cursor()
+            cursor.execute(f"SELECT * FROM `{table_name}` WHERE id = %s", (record_id,))
+            columns = [col[0] for col in cursor.description]
+            row = cursor.fetchone()
+            cursor.close()
+            conn.close()
+            record = dict(zip(columns, row)) if row else {}
 
             return success_response('记录更新成功', record)
 
@@ -202,30 +227,59 @@ class RecordDetailView(View):
             return error_response('无效的 JSON 格式')
         except Exception as e:
             return error_response(f'更新记录失败: {str(e)}')
+        finally:
+            if conn:
+                conn.close()
 
     def delete(self, request, table_name, record_id):
         """删除记录"""
+        print(f"[DELETE] 表名: {table_name}, 记录ID: {record_id}")
+
         if not validate_table_name(table_name):
             return error_response('无效的表名')
 
-        db_name = get_db_name(request)
-        if db_name:
-            switch_database(db_name)
+        db_config = get_db_config(request)
+        if not db_config['database']:
+            return error_response('请先连接数据库')
+
+        print(f"[DELETE] 数据库配置: {db_config}")
 
         try:
-            with connection.cursor() as cursor:
-                # 先检查记录是否存在
-                cursor.execute(f"SELECT id FROM `{table_name}` WHERE id = %s", [record_id])
-                if not cursor.fetchone():
-                    return error_response('记录不存在', status=404)
+            conn = get_db_connection(db_config)
+            print("[DELETE] 数据库连接成功")
+        except mysql.connector.Error as e:
+            print(f"[DELETE] 数据库连接失败: {e}")
+            return error_response(f'数据库连接失败: {str(e)}')
 
-                # 删除记录
-                cursor.execute(f"DELETE FROM `{table_name}` WHERE id = %s", [record_id])
+        try:
+            # 先检查记录是否存在 - 支持多种主键名
+            cursor = conn.cursor()
 
-            return success_response('记录删除成功')
+            # 尝试不同的主键名
+            for pk_name in ['id', 'ID', 'Id', 'Id_', 'id_']:
+                check_sql = f"SELECT * FROM `{table_name}` WHERE `{pk_name}` = %s LIMIT 1"
+                cursor.execute(check_sql, (record_id,))
+                if cursor.fetchone():
+                    print(f"[DELETE] 找到记录，主键: {pk_name}")
+                    break
+
+            # 执行删除 - 尝试用 id
+            delete_sql = f"DELETE FROM `{table_name}` WHERE id = %s"
+            cursor.execute(delete_sql, (record_id,))
+            conn.commit()
+            deleted = cursor.rowcount
+            cursor.close()
+            conn.close()
+
+            print(f"[DELETE] 删除了 {deleted} 条记录")
+            return success_response(f'记录删除成功（{deleted}条）')
 
         except Exception as e:
+            print(f"[DELETE] 删除失败: {e}")
             return error_response(f'删除记录失败: {str(e)}')
+        finally:
+            if conn and conn.is_connected():
+                conn.close()
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -237,9 +291,14 @@ class BatchDeleteView(View):
         if not validate_table_name(table_name):
             return error_response('无效的表名')
 
-        db_name = get_db_name(request)
-        if db_name:
-            switch_database(db_name)
+        db_config = get_db_config(request)
+        if not db_config['database']:
+            return error_response('请先连接数据库')
+
+        try:
+            conn = get_db_connection(db_config)
+        except mysql.connector.Error as e:
+            return error_response(f'数据库连接失败: {str(e)}')
 
         try:
             data = json.loads(request.body)
@@ -255,9 +314,12 @@ class BatchDeleteView(View):
             placeholders = ', '.join(['%s'] * len(ids))
             sql = f"DELETE FROM `{table_name}` WHERE id IN ({placeholders})"
 
-            with connection.cursor() as cursor:
-                cursor.execute(sql, ids)
-                deleted_count = cursor.rowcount
+            cursor = conn.cursor()
+            cursor.execute(sql, ids)
+            conn.commit()
+            deleted_count = cursor.rowcount
+            cursor.close()
+            conn.close()
 
             return success_response(f'成功删除 {deleted_count} 条记录', {'deleted': deleted_count})
 
@@ -265,3 +327,6 @@ class BatchDeleteView(View):
             return error_response('无效的 JSON 格式')
         except Exception as e:
             return error_response(f'批量删除失败: {str(e)}')
+        finally:
+            if conn:
+                conn.close()
