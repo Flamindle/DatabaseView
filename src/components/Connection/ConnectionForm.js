@@ -49,9 +49,14 @@ function init(container, callbacks = {}) {
       <div class="form-actions">
         <button type="button" class="btn-primary" id="connectBtn" disabled>连接</button>
         <button type="button" class="btn-secondary" id="disconnectBtn" disabled>断开</button>
+        <button type="button" class="btn-secondary" id="debugBtn" title="打开调试面板">调试</button>
       </div>
     </div>
     <div id="message" class="message hidden"></div>
+    <div id="debugPanel" style="display:none;margin-top:16px;padding:12px;background:var(--bg-secondary);border-radius:8px;border:1px solid var(--border);">
+      <div style="font-weight:600;margin-bottom:8px;">调试信息</div>
+      <div id="debugContent" style="font-size:12px;font-family:monospace;white-space:pre-wrap;word-break:break-all;"></div>
+    </div>
   `;
 
   // 获取元素引用
@@ -64,6 +69,7 @@ function init(container, callbacks = {}) {
     getDbBtn: document.getElementById('getDbBtn'),
     connectBtn: document.getElementById('connectBtn'),
     disconnectBtn: document.getElementById('disconnectBtn'),
+    debugBtn: document.getElementById('debugBtn'),
     message: document.getElementById('message')
   };
 
@@ -87,6 +93,27 @@ function restoreConfig() {
 function bindEvents() {
   elements.getDbBtn.addEventListener('click', handleGetDatabases);
   elements.connectBtn.addEventListener('click', handleConnect);
+  elements.debugBtn.addEventListener('click', toggleDebugPanel);
+}
+
+let debugVisible = false;
+
+function toggleDebugPanel() {
+  debugVisible = !debugVisible;
+  const panel = document.getElementById('debugPanel');
+  if (panel) {
+    panel.style.display = debugVisible ? 'block' : 'none';
+  }
+}
+
+function showDebugInfo(info) {
+  const content = document.getElementById('debugContent');
+  if (content) {
+    content.textContent = typeof info === 'string' ? info : JSON.stringify(info, null, 2);
+  }
+  if (!debugVisible) {
+    toggleDebugPanel();
+  }
 }
 
 function showMessage(text, isSuccess = true) {
@@ -177,4 +204,4 @@ function enableDisconnect(enable = true) {
   elements.getDbBtn.disabled = enable;
 }
 
-export { init, enableDisconnect, showMessage };
+export { init, enableDisconnect, showMessage, showDebugInfo };

@@ -1,0 +1,473 @@
+/* ============================================================
+   图形模式视图
+   ============================================================ */
+.chart-view {
+  display: flex;
+  gap: 16px;
+  min-height: 500px;
+}
+
+/* 左侧字段面板 */
+.chart-field-panel {
+  width: 260px;
+  flex-shrink: 0;
+  background: #ffffff;
+  border-radius: var(--radius);
+  border: 1px solid #e2e8f0;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  max-height: 600px;
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.panel-header h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.refresh-btn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.refresh-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* 字段列表 */
+.field-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 100px;
+  max-height: 200px;
+}
+
+.field-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-sm);
+  cursor: grab;
+  transition: all 0.2s;
+  font-size: 13px;
+  color: #1e293b;
+}
+
+.field-item:hover {
+  border-color: var(--primary);
+  background: #eef1fe;
+  transform: translateX(4px);
+}
+
+.field-item:active {
+  cursor: grabbing;
+}
+
+.field-item.dragging {
+  opacity: 0.5;
+}
+
+.field-icon {
+  font-size: 14px;
+}
+
+.field-name {
+  flex: 1;
+  color: #1e293b;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.field-type {
+  font-size: 11px;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.field-item.number .field-type {
+  background: rgba(79, 110, 247, 0.15);
+  color: #4f6ef7;
+}
+
+.field-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  background: #f8fafc;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: #475569;
+  margin-top: 12px;
+  flex-shrink: 0;
+}
+
+.hint-icon {
+  font-size: 14px;
+}
+
+/* 右侧图表区域 */
+.chart-canvas-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 图表类型选择栏 */
+.chart-type-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #ffffff;
+  border-radius: var(--radius);
+  border: 1px solid #e2e8f0;
+  flex-wrap: wrap;
+}
+
+.type-label {
+  font-size: 13px;
+  color: #1e293b;
+  font-weight: 500;
+}
+
+.chart-type-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.chart-type-btn {
+  width: 40px;
+  height: 36px;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.chart-type-btn .btn-text {
+  display: none;
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 11px;
+  color: #1e293b;
+}
+
+.chart-type-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.chart-type-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
+}
+
+/* 图表配置区域 */
+.chart-config-area {
+  background: #ffffff;
+  border-radius: var(--radius);
+  border: 1px solid #e2e8f0;
+  padding: 16px;
+}
+
+.config-row {
+  display: flex;
+  gap: 16px;
+}
+
+.config-zone {
+  flex: 1;
+  min-height: 80px;
+  border: 2px dashed #cbd5e1;
+  border-radius: var(--radius);
+  padding: 12px;
+  transition: all 0.2s;
+}
+
+.config-zone.drag-over,
+.config-zone.drop-zone-hover {
+  border-color: var(--primary);
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.dimension-zone {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08));
+}
+
+.metric-zone {
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.08), rgba(16, 185, 129, 0.08));
+}
+
+.zone-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.zone-icon {
+  font-size: 14px;
+}
+
+.dropped-fields {
+  min-height: 40px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-content: flex-start;
+}
+
+.dropped-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--primary);
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.dropped-field .field-name {
+  max-width: 100px;
+  color: #ffffff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remove-field {
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: rgba(255,255,255,0.3);
+  color: #ffffff;
+  border-radius: 50%;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.remove-field:hover {
+  background: rgba(255,255,255,0.5);
+}
+
+/* 图表画布 */
+.chart-canvas {
+  flex: 1;
+  min-height: 350px;
+  background: #ffffff;
+  border-radius: var(--radius);
+  border: 1px solid #e2e8f0;
+  padding: 16px;
+  position: relative;
+}
+
+.chart-canvas canvas {
+  width: 100% !important;
+  height: 350px !important;
+}
+
+.chart-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+}
+
+.chart-placeholder.hidden {
+  display: none;
+}
+
+.placeholder-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.chart-placeholder p {
+  margin: 4px 0;
+  font-size: 14px;
+  color: #64748b;
+}
+
+.placeholder-hint {
+  font-size: 12px !important;
+  color: #94a3b8 !important;
+}
+
+/* 深色主题适配 */
+.dark-theme .chart-field-panel,
+.dark-theme .chart-type-bar,
+.dark-theme .chart-config-area,
+.dark-theme .chart-canvas {
+  background: #1a1a2e;
+  border-color: #333;
+}
+
+.dark-theme .panel-header h4,
+.dark-theme .type-label,
+.dark-theme .zone-label {
+  color: #e2e8f0;
+}
+
+.dark-theme .field-item {
+  background: #252540;
+  border-color: #333;
+  color: #e2e8f0;
+}
+
+.dark-theme .field-item:hover {
+  background: rgba(102, 126, 234, 0.2);
+}
+
+.dark-theme .field-name {
+  color: #e2e8f0;
+}
+
+.dark-theme .field-type {
+  background: #333;
+  color: #aaa;
+}
+
+.dark-theme .field-hint {
+  background: #252540;
+  color: #94a3b8;
+}
+
+.dark-theme .chart-type-btn {
+  background: #252540;
+  border-color: #333;
+  color: #94a3b8;
+}
+
+.dark-theme .chart-type-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.dark-theme .dimension-zone {
+  background: rgba(102, 126, 234, 0.15);
+}
+
+.dark-theme .metric-zone {
+  background: rgba(52, 211, 153, 0.15);
+}
+
+.dark-theme .config-zone {
+  border-color: #444;
+}
+
+.dark-theme .chart-placeholder p {
+  color: #94a3b8;
+}
+
+.dark-theme .placeholder-hint {
+  color: #64748b !important;
+}
+
+/* 护眼主题 */
+.sepia-theme .chart-field-panel,
+.sepia-theme .chart-type-bar,
+.sepia-theme .chart-config-area,
+.sepia-theme .chart-canvas {
+  background: #f5f0e6;
+}
+
+.sepia-theme .field-hint {
+  background: #ebe5d9;
+  color: #6b5b4f;
+}
+
+/* 粉色主题 */
+.pink-theme .chart-field-panel,
+.pink-theme .chart-type-bar,
+.pink-theme .chart-config-area,
+.pink-theme .chart-canvas {
+  background: #fff5f7;
+}
+
+.pink-theme .dropped-field {
+  background: linear-gradient(135deg, #f472b6, #e879f9);
+}
+
+/* 移动端适配 */
+@media (max-width: 900px) {
+  .chart-view {
+    flex-direction: column;
+  }
+
+  .chart-field-panel {
+    width: 100%;
+  }
+
+  .field-list {
+    max-height: 200px;
+  }
+
+  .config-row {
+    flex-direction: column;
+  }
+}

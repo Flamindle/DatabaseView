@@ -12,7 +12,10 @@
       "Bash(npx vite:*)",
       "Bash(npm run:*)",
       "Bash(pip install:*)",
-      "Bash(python manage.py check)"
+      "Bash(python manage.py check)",
+      "Bash(node --check src/app.js)",
+      "Bash(node --check src/components/ViewMode/ViewMode.js)",
+      "Bash(node --check src/components/Chart/ChartView.js)"
     ]
   }
 }

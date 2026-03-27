@@ -65,5 +65,5 @@ vuecli/.env.*.local
 .DS_Store
 Thumbs.db
 
-# 不要忽略 v_perfapp/dist 文件夹
+# 不要忽略的文件夹
 !.*/v_perfapp/dist/

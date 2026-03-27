@@ -1,0 +1,107 @@
+/* ============================================================
+   视图模式切换器
+   ============================================================ */
+.view-mode-switcher {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px 0;
+  margin-bottom: 8px;
+}
+
+.mode-btn-group {
+  display: flex;
+  gap: 0;
+  background: var(--surface);
+  border: 2px solid var(--primary);
+  border-radius: 30px;
+  padding: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.mode-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  border: none;
+  border-radius: 26px;
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mode-btn:hover:not(.active) {
+  color: var(--primary);
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.mode-btn.active {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.4);
+}
+
+.mode-btn svg {
+  flex-shrink: 0;
+}
+
+/* 深色主题适配 */
+.dark-theme .mode-btn-group {
+  background: #1a1a2e;
+  border-color: var(--primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.dark-theme .mode-btn {
+  color: #e0e0e0;
+}
+
+.dark-theme .mode-btn:hover:not(.active) {
+  color: var(--primary);
+  background: rgba(102, 126, 234, 0.15);
+}
+
+.dark-theme .mode-btn.active {
+  color: #fff;
+}
+
+/* 护眼主题适配 */
+.sepia-theme .mode-btn-group {
+  border-color: #5b8a72;
+  background: #f5f0e6;
+}
+
+.sepia-theme .mode-btn.active {
+  background: #5b8a72;
+}
+
+/* 粉色主题适配 */
+.pink-theme .mode-btn-group {
+  border-color: #e879f9;
+  background: #fff5f7;
+}
+
+.pink-theme .mode-btn.active {
+  background: linear-gradient(135deg, #f472b6, #e879f9);
+}
+
+/* 移动端适配 */
+@media (max-width: 600px) {
+  .mode-btn {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  .mode-btn span {
+    display: none;
+  }
+
+  .mode-btn svg {
+    width: 22px;
+    height: 22px;
+  }
+}

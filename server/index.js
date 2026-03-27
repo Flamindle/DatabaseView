@@ -13,6 +13,9 @@ const errorHandler = require('./middleware/errorHandler');
 const app = express();
 const PORT = 3000;
 
+// 支持 BigInt JSON 序列化（MySQL2 返回的 BigInt 字段）
+BigInt.prototype.toJSON = function() { return this.toString(); };
+
 // 中间件
 app.use(cors());
 app.use(express.json());
