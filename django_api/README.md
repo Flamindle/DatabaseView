@@ -4,7 +4,7 @@
 
 ## 环境要求
 
-- Python 3.10+
+- Python 3.9+
 - MySQL 5.7+ 或 MySQL 8.0+
 
 ## 安装

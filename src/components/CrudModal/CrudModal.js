@@ -86,11 +86,17 @@ async function showAdd(tableName, fields) {
  * @param {Object} recordData - 当前记录数据
  */
 async function showEdit(tableName, recordId, recordData) {
+  console.log('[编辑] 打开编辑模态框', { tableName, recordId, recordData });
+
   const modal = document.getElementById('crudModal');
-  if (!modal) return;
+  if (!modal) {
+    console.error('[编辑] 模态框元素不存在');
+    return;
+  }
 
   // 获取表结构
   const schemaResult = await getTableSchema(tableName);
+  console.log('[编辑] 表结构请求结果:', schemaResult);
   const schema = schemaResult.success ? schemaResult.data.schema : [];
 
   document.getElementById('modalTitle').textContent = '编辑记录';
@@ -98,6 +104,7 @@ async function showEdit(tableName, recordId, recordData) {
   document.getElementById('modalSubmit').dataset.tableName = tableName;
   document.getElementById('modalSubmit').dataset.recordId = recordId;
 
+  console.log('[编辑] 渲染表单字段, schema:', schema, 'fields:', Object.keys(recordData));
   renderFormFields(schema, Object.keys(recordData), recordData);
   modal.classList.remove('hidden');
 }
@@ -182,18 +189,27 @@ async function handleSubmit() {
   const data = {};
 
   for (const [key, value] of formData.entries()) {
+    // 跳过 ID 字段
+    if (key.toLowerCase() === 'id') continue;
+
     // 处理复选框
     const checkbox = document.getElementById(`field_${key}`);
     if (checkbox && checkbox.type === 'checkbox') {
       data[key] = checkbox.checked ? 1 : 0;
+    } else if (checkbox && checkbox.type === 'number') {
+      // 数字字段：如果为空，设为 null
+      data[key] = value === '' ? null : Number(value);
     } else {
-      data[key] = value;
+      // 其他字段：空字符串转为 null
+      data[key] = value === '' ? null : value;
     }
   }
 
   // 禁用提交按钮，防止重复点击
   btn.disabled = true;
   btn.textContent = '提交中...';
+
+  console.log('[提交] 发送的数据:', data);
 
   try {
     let result;

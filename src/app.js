@@ -81,8 +81,10 @@ function ensurePaginationHandler() {
     // 表格操作按钮（编辑）
     const editBtn = e.target.closest('.btn-edit');
     if (editBtn) {
+      console.log('[App] 点击了编辑按钮', editBtn.dataset);
       const recordId = editBtn.dataset.id;
-      const recordData = JSON.parse(editBtn.dataset.record || '{}');
+      const recordData = JSON.parse(decodeURIComponent(editBtn.dataset.record || '{}'));
+      console.log('[App] 解析的记录数据:', recordData);
       showEdit(state.currentTable, recordId, recordData);
       return;
     }
