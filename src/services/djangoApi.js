@@ -33,6 +33,59 @@ function getHeaders() {
   return headers;
 }
 
+// ============================================================
+// 认证接口
+// ============================================================
+
+/**
+ * 用户登录
+ */
+export async function login(username, password) {
+  try {
+    const resp = await fetch(`${DJANGO_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: getHeaders(),  // 传递数据库配置
+      credentials: 'include',  // 携带 cookie
+      body: JSON.stringify({ username, password })
+    });
+    return await resp.json();
+  } catch (err) {
+    return { success: false, message: `请求失败: ${err.message}` };
+  }
+}
+
+/**
+ * 用户登出
+ */
+export async function logout() {
+  try {
+    const resp = await fetch(`${DJANGO_BASE_URL}/auth/logout`, {
+      method: 'POST',
+      headers: getHeaders(),
+      credentials: 'include'
+    });
+    return await resp.json();
+  } catch (err) {
+    return { success: false, message: `请求失败: ${err.message}` };
+  }
+}
+
+/**
+ * 获取当前登录状态
+ */
+export async function getAuthStatus() {
+  try {
+    const resp = await fetch(`${DJANGO_BASE_URL}/auth/status`, {
+      method: 'GET',
+      headers: getHeaders(),
+      credentials: 'include'
+    });
+    return await resp.json();
+  } catch (err) {
+    return { success: false, is_authenticated: false, message: `请求失败: ${err.message}` };
+  }
+}
+
 /**
  * 新增记录
  * @param {string} tableName - 表名
@@ -44,6 +97,7 @@ export async function createRecord(tableName, data) {
     const resp = await fetch(`${DJANGO_BASE_URL}/tables/${tableName}/records`, {
       method: 'POST',
       headers: getHeaders(),
+      credentials: 'include',
       body: JSON.stringify({ data })
     });
     return await resp.json();
@@ -64,6 +118,7 @@ export async function updateRecord(tableName, id, data) {
     const resp = await fetch(`${DJANGO_BASE_URL}/tables/${tableName}/records/${id}`, {
       method: 'PUT',
       headers: getHeaders(),
+      credentials: 'include',
       body: JSON.stringify({ data })
     });
     return await resp.json();
@@ -82,7 +137,8 @@ export async function deleteRecord(tableName, id) {
   try {
     const resp = await fetch(`${DJANGO_BASE_URL}/tables/${tableName}/records/${id}`, {
       method: 'DELETE',
-      headers: getHeaders()
+      headers: getHeaders(),
+      credentials: 'include'
     });
     return await resp.json();
   } catch (err) {
@@ -101,6 +157,7 @@ export async function batchDeleteRecords(tableName, ids) {
     const resp = await fetch(`${DJANGO_BASE_URL}/tables/${tableName}/records/batch`, {
       method: 'POST',
       headers: getHeaders(),
+      credentials: 'include',
       body: JSON.stringify({ ids })
     });
     return await resp.json();

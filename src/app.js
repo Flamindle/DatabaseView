@@ -10,12 +10,14 @@ import './components/FieldPanel/FieldPanel.css';
 import './components/ContextMenu/ContextMenu.css';
 import './components/Theme/ThemeToggle.css';
 import './components/CrudModal/CrudModal.css';
+import './components/Auth/LoginModal.css';
 
 import { init as initConnection } from './components/Connection/ConnectionForm.js';
 import { init as initToolbar } from './components/Toolbar/TableToolbar.js';
 import { init as initColumnManager } from './components/Table/ColumnManager.js';
 import { init as initTheme } from './components/Theme/ThemeToggle.js';
 import { init as initCrudModal, showAdd, showEdit } from './components/CrudModal/CrudModal.js';
+import { init as initAuth, showLoginModal, handleLogout } from './components/Auth/LoginModal.js';
 import { buildTable } from './components/Table/DataTable.js';
 import { loadConfig, saveConfig } from './utils/storage.js';
 import { deleteRecord } from './services/djangoApi.js';
@@ -31,7 +33,8 @@ const state = {
   columnsConfig: [],
   sortField: '',
   sortOrder: 'ASC',
-  pagination: { page: 1, pageSize: 100, total: 0, totalPages: 0 }
+  pagination: { page: 1, pageSize: 100, total: 0, totalPages: 0 },
+  isLoggedIn: false  // 登录状态
 };
 
 // DOM 挂载点
@@ -81,6 +84,10 @@ function ensurePaginationHandler() {
     // 表格操作按钮（编辑）
     const editBtn = e.target.closest('.btn-edit');
     if (editBtn) {
+      if (!state.isLoggedIn) {
+        showMsg('请先登录后才能编辑记录', false);
+        return;
+      }
       console.log('[App] 点击了编辑按钮', editBtn.dataset);
       const recordId = editBtn.dataset.id;
       const recordData = JSON.parse(decodeURIComponent(editBtn.dataset.record || '{}'));
@@ -92,6 +99,10 @@ function ensurePaginationHandler() {
     // 表格操作按钮（删除）
     const deleteBtn = e.target.closest('.btn-delete');
     if (deleteBtn) {
+      if (!state.isLoggedIn) {
+        showMsg('请先登录后才能删除记录', false);
+        return;
+      }
       const recordId = deleteBtn.dataset.id;
       const recordName = deleteBtn.dataset.name || `ID: ${recordId}`;
       if (confirm(`确定要删除这条记录吗？\n${recordName}`)) {
@@ -103,6 +114,10 @@ function ensurePaginationHandler() {
     // 新增记录按钮
     const addBtn = e.target.closest('#addRecordBtn');
     if (addBtn) {
+      if (!state.isLoggedIn) {
+        showMsg('请先登录后才能新增记录', false);
+        return;
+      }
       const fields = state.lastQueryResult ? state.lastQueryResult.fields : [];
       showAdd(state.currentTable, fields);
       return;
@@ -328,6 +343,32 @@ initColumnManager($colMgr, {
 initCrudModal({
   onSuccess: onCrudSuccess,
   onError: onCrudError
+});
+
+// 登录模块
+initAuth({
+  onLoginSuccess: (userData) => {
+    state.isLoggedIn = true;
+    showMsg(`欢迎，${userData.username}！您已获得增删改权限`, true);
+  },
+  onLogoutSuccess: () => {
+    state.isLoggedIn = false;
+    showMsg('已退出登录', true);
+  },
+  onAuthChange: ({ isLoggedIn }) => {
+    state.isLoggedIn = isLoggedIn;
+  }
+});
+
+// 登录按钮点击事件
+document.getElementById('authBtn').addEventListener('click', () => {
+  if (state.isLoggedIn) {
+    if (confirm('确定要退出登录吗？')) {
+      handleLogout();
+    }
+  } else {
+    showLoginModal();
+  }
 });
 
 // ============================================================

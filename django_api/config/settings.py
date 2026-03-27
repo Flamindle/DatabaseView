@@ -23,6 +23,7 @@ ALLOWED_HOSTS = ['*']
 INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.auth',
+    'django.contrib.sessions',
     'rest_framework',
     'corsheaders',
     'crud_api',
@@ -32,6 +33,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -52,8 +54,11 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# Database - Django 内部使用 SQLite（不需要 MySQL）
-# 用户的数据库连接配置通过请求头动态传递
+# =====================================================
+# 数据库配置
+# 使用 SQLite 存储 session（认证不需要 MySQL）
+# CRUD 操作使用前端传入的动态配置
+# =====================================================
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -84,42 +89,36 @@ REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'crud_api.utils.custom_exception_handler',
 }
 
-# CORS 配置 - 允许前端跨域请求
+# CORS 配置
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # Vite 开发服务器
-    "http://localhost:3000",  # Node.js 生产服务器
+    "http://localhost:5173",
+    "http://localhost:3000",
     "http://127.0.0.1:5173",
     "http://127.0.0.1:3000",
 ]
-
-# 允许所有来源（开发环境）
 CORS_ALLOW_ALL_ORIGINS = DEBUG
-
-# 允许携带凭证
 CORS_ALLOW_CREDENTIALS = True
 
-# 允许的 HTTP 方法
-CORS_ALLOW_METHODS = [
-    'GET',
-    'POST',
-    'PUT',
-    'PATCH',
-    'DELETE',
-    'OPTIONS',
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:3000',
 ]
 
-# 允许的请求头（包含数据库配置头）
-CORS_ALLOW_HEADERS = [
-    'accept',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'origin',
-    'user-agent',
-    'x-requested-with',
-    'x-database-name',
-    'x-db-host',
-    'x-db-port',
-    'x-db-user',
-    'x-db-password',
+CORS_ALLOW_METHODS = [
+    'GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS',
 ]
+
+CORS_ALLOW_HEADERS = [
+    'accept', 'accept-encoding', 'authorization', 'content-type',
+    'origin', 'user-agent', 'x-requested-with',
+    'x-database-name', 'x-db-host', 'x-db-port', 'x-db-user', 'x-db-password',
+]
+
+# Session 配置
+SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
+SESSION_COOKIE_NAME = 'dbview_session'
+SESSION_COOKIE_AGE = 86400
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
