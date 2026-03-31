@@ -68,4 +68,45 @@ function disconnect() {
   });
 }
 
-export { getDatabases, connectDb, queryTable, disconnect };
+/**
+ * 仪表板专用查询
+ * 自动连接数据库并查询指定表
+ * @param {Object} params - {tableName, dimensions, metrics, page, pageSize}
+ */
+async function doQueryDashboard(params) {
+  try {
+    // 先连接数据库
+    const dbConfig = JSON.parse(localStorage.getItem('mysql_viewer_config') || '{}');
+    if (!dbConfig.database) {
+      return { success: false, message: '未连接数据库' };
+    }
+
+    const connectResp = await fetch(`${API_BASE}/connect`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dbConfig)
+    });
+    const connectResult = await connectResp.json();
+    if (!connectResult.success) {
+      return { success: false, message: '连接数据库失败：' + connectResult.message };
+    }
+
+    // 查询数据
+    const queryResp = await fetch(`${API_BASE}/query-table`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tableName: params.tableName,
+        page: params.page || 1,
+        pageSize: params.pageSize || 500
+      })
+    });
+    const queryResult = await queryResp.json();
+
+    return queryResult;
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+}
+
+export { getDatabases, connectDb, queryTable, disconnect, doQueryDashboard };

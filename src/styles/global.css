@@ -243,3 +243,59 @@ button:disabled {
 .hidden {
   display: none;
 }
+
+/* ============================================================
+   子页面顶部导航（chart.html / dashboard.html）
+   ============================================================ */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px 24px;
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+}
+
+.page-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--primary);
+}
+
+.page-title h1 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.page-title svg {
+  flex-shrink: 0;
+}
+
+.page-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.datasource-info {
+  font-size: 13px;
+  color: var(--text-muted);
+  background: var(--bg);
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+}
+
+.datasource-info.connected {
+  color: var(--success-text);
+  background: var(--success-bg);
+  border-color: var(--success);
+}
+

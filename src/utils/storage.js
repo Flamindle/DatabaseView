@@ -5,6 +5,8 @@
 
 // 连接配置的存储键名
 const STORAGE_KEY = 'mysql_viewer_config';
+// 仪表板配置的存储键名
+const DASHBOARD_KEY = 'mysql_viewer_dashboard';
 
 /**
  * 保存连接信息到 localStorage
@@ -30,4 +32,39 @@ function loadConfig() {
   return null;
 }
 
-export { saveConfig, loadConfig, STORAGE_KEY };
+/**
+ * 保存仪表板配置到 localStorage
+ * @param {Object} config - 仪表板配置
+ */
+function saveDashboard(config) {
+  localStorage.setItem(DASHBOARD_KEY, JSON.stringify({
+    version: 1,
+    ...config,
+    updatedAt: Date.now()
+  }));
+}
+
+/**
+ * 从 localStorage 读取仪表板配置
+ * @returns {Object|null} 仪表板配置或 null
+ */
+function loadDashboard() {
+  const saved = localStorage.getItem(DASHBOARD_KEY);
+  if (saved) {
+    try {
+      return JSON.parse(saved);
+    } catch (e) {
+      return null;
+    }
+  }
+  return null;
+}
+
+/**
+ * 清除仪表板配置
+ */
+function clearDashboard() {
+  localStorage.removeItem(DASHBOARD_KEY);
+}
+
+export { saveConfig, loadConfig, saveDashboard, loadDashboard, clearDashboard, STORAGE_KEY, DASHBOARD_KEY };

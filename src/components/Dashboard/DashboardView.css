@@ -1,0 +1,210 @@
+/* ============================================================
+   仪表板视图样式
+   ============================================================ */
+
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.dashboard-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.dashboard-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-add-card {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-add-card:hover {
+  background: var(--primary-dark);
+}
+
+/* 网格布局 */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(480px, 1fr));
+  gap: 16px;
+}
+
+.dashboard-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+  font-size: 14px;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+}
+
+/* ============================================================
+   单卡片样式
+   ============================================================ */
+
+.dashboard-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: box-shadow 0.2s, opacity 0.2s;
+}
+
+.dashboard-card:hover {
+  box-shadow: var(--shadow);
+}
+
+.dashboard-card.card-dragging {
+  opacity: 0.3;
+}
+
+.dashboard-card.card-ghost {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.85;
+  box-shadow: var(--shadow-lg);
+}
+
+.dashboard-card.card-drop-target::before {
+  content: '';
+  display: block;
+  height: 4px;
+  background: var(--primary);
+  border-radius: 2px;
+  margin: -2px 0;
+}
+
+/* 卡片头部 */
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.card-drag-handle {
+  cursor: grab;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+
+.card-drag-handle:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+.card-drag-handle:active {
+  cursor: grabbing;
+}
+
+.card-title {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.card-action-btn {
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.card-action-btn:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+.card-action-btn.active {
+  background: var(--primary);
+  color: #fff;
+}
+
+.card-delete-btn:hover {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+/* 卡片内容 */
+.card-body {
+  position: relative;
+  height: 260px;
+  padding: 12px;
+}
+
+.card-body canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.card-loading,
+.card-error {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--text-muted);
+  background: var(--surface);
+}
+
+.card-error {
+  color: var(--danger);
+}
+
+/* ============================================================
+   响应式
+   ============================================================ */
+
+@media (max-width: 900px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}

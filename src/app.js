@@ -11,7 +11,6 @@ import './components/ContextMenu/ContextMenu.css';
 import './components/Theme/ThemeToggle.css';
 import './components/CrudModal/CrudModal.css';
 import './components/Auth/LoginModal.css';
-import './components/Chart/ChartView.css';
 import './components/ViewMode/ViewMode.css';
 
 import { init as initConnection } from './components/Connection/ConnectionForm.js';
@@ -20,7 +19,6 @@ import { init as initColumnManager } from './components/Table/ColumnManager.js';
 import { init as initTheme } from './components/Theme/ThemeToggle.js';
 import { init as initCrudModal, showAdd, showEdit } from './components/CrudModal/CrudModal.js';
 import { init as initAuth, showLoginModal, handleLogout } from './components/Auth/LoginModal.js';
-import { init as initChart, setFields, renderChart, clearConfig, getConfig } from './components/Chart/ChartView.js';
 import { init as initViewMode } from './components/ViewMode/ViewMode.js';
 import { buildTable } from './components/Table/DataTable.js';
 import { loadConfig, saveConfig } from './utils/storage.js';
@@ -38,8 +36,7 @@ const state = {
   sortField: '',
   sortOrder: 'ASC',
   pagination: { page: 1, pageSize: 100, total: 0, totalPages: 0 },
-  isLoggedIn: false,  // 登录状态
-  viewMode: 'table'   // 视图模式: 'table' | 'chart'
+  isLoggedIn: false  // 登录状态
 };
 
 // DOM 挂载点
@@ -150,18 +147,21 @@ async function handleDelete(recordId) {
   } catch (err) {
     console.error('删除请求失败:', err);
     onCrudError(`删除失败: ${err.message}`);
-    onCrudError(`删除失败: ${err.message}`);
   }
 }
 
 // ============================================================
 // 消息提示
 // ============================================================
+let msgTimer = null;
 function showMsg(text, isSuccess = true) {
   const msgEl = document.getElementById('message');
   if (msgEl) {
     msgEl.textContent = text;
     msgEl.className = `message ${isSuccess ? 'success' : 'error'}`;
+    msgEl.style.display = 'block';
+    if (msgTimer) clearTimeout(msgTimer);
+    msgTimer = setTimeout(() => { msgEl.style.display = 'none'; }, 4000);
   }
 }
 
@@ -196,13 +196,8 @@ async function doQuery(tableName, sortField = '', sortOrder = 'ASC', page = 1) {
       state.sortOrder = sortOrder;
       state.pagination = result.pagination;
 
-      // 根据当前模式渲染对应视图
-      if (state.viewMode === 'chart') {
-        renderChartMode();
-      } else {
-        renderTable();
-        renderPagination();
-      }
+      renderTable();
+      renderPagination();
     } else {
       showMsg(result.message, false);
       $data.innerHTML = '';
@@ -230,170 +225,6 @@ function renderTable() {
       renderTable();
     }
   });
-}
-
-// ============================================================
-// 渲染图形模式
-// ============================================================
-let chartEventHandlerBound = false;
-
-function renderChartMode() {
-  console.log('[renderChartMode] 函数被调用');
-  console.log('[renderChartMode] state.lastQueryResult:', state.lastQueryResult);
-
-  if (!state.lastQueryResult) {
-    console.log('[renderChartMode] 无查询结果，无法渲染图形模式');
-    return;
-  }
-
-  const { fields, data } = state.lastQueryResult;
-  console.log('[renderChartMode] 数据字段:', fields, '数据行数:', data?.length);
-
-  // 先初始化图形模式 DOM（只执行一次）
-  if (!document.getElementById('chartViewWrapper')) {
-    // 创建包装容器
-    const wrapper = document.createElement('div');
-    wrapper.id = 'chartViewWrapper';
-    $data.appendChild(wrapper);
-    // 初始化图形模式
-    initChart(wrapper, {});
-  }
-
-  // 分析字段类型
-  const fieldConfigs = analyzeFields(fields, data);
-
-  // 设置字段列表
-  setFields(fieldConfigs);
-
-  // 只注册一次事件监听器
-  if (!chartEventHandlerBound) {
-    document.removeEventListener('chartConfigChange', handleChartConfigChange);
-    document.addEventListener('chartConfigChange', handleChartConfigChange);
-    chartEventHandlerBound = true;
-  }
-}
-
-function handleChartConfigChange(e) {
-  const { dimensions, metrics, chartType } = e.detail;
-  console.log('[Chart] chartConfigChange 事件触发', { dimensions, metrics, chartType });
-
-  if (!state.lastQueryResult) {
-    console.log('[Chart] 无查询结果，返回');
-    return;
-  }
-
-  const { data } = state.lastQueryResult;
-  console.log('[Chart] 查询数据行数:', data?.length);
-
-  // 聚合数据
-  const aggregated = aggregateData(data, dimensions, metrics);
-  console.log('[Chart] 聚合结果:', aggregated);
-
-  if (aggregated.labels.length > 0) {
-    console.log('[Chart] 开始渲染图表，canvas=', document.getElementById('dataChartCanvas'));
-    console.log('[Chart] renderChart 参数: labels=', aggregated.labels.slice(0,5), 'values=', aggregated.values.slice(0,5));
-    renderChart({
-      labels: aggregated.labels,
-      values: aggregated.values,
-      chartType: chartType || 'bar'
-    }, { dimensions, metrics });
-  } else {
-    console.log('[Chart] 聚合数据为空，不渲染图表');
-    // 暴露调试函数到 window，方便在控制台排查
-    window.__debugChart = () => {
-      console.log('=== 调试信息 ===');
-      console.log('dimensions:', dimensions);
-      console.log('metrics:', metrics);
-      console.log('data 前3行:', JSON.stringify(data?.slice(0,3), null, 2));
-      // 手动调用聚合看结果
-      const result = aggregateData(data, dimensions, metrics);
-      console.log('手动聚合结果:', result);
-    };
-    console.log('[Chart] 调用 window.__debugChart() 查看详细调试信息');
-  }
-}
-
-function analyzeFields(fields, data) {
-  console.log('[analyzeFields] 分析字段', { fields, dataLength: data?.length });
-  if (!data || data.length === 0) {
-    console.log('[analyzeFields] 数据为空，所有字段设为 text 类型');
-    return fields.map(name => ({ name, type: 'text' }));
-  }
-
-  const result = fields.map(name => {
-    const sample = data.find(row => row[name] != null);
-    if (!sample) return { name, type: 'text' };
-
-    const val = sample[name];
-    const type = typeof val;
-
-    let fieldType = 'text';
-    if (type === 'number' || !isNaN(parseFloat(val))) {
-      fieldType = 'number';
-    } else if (val instanceof Date || (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val))) {
-      fieldType = 'date';
-    }
-
-    console.log(`[analyzeFields] 字段 ${name}: 值="${val}", 检测类型=${fieldType}`);
-    return { name, type: fieldType };
-  });
-
-  console.log('[analyzeFields] 最终结果:', result);
-  return result;
-}
-
-function aggregateData(data, dimensions, metrics) {
-  console.log('[aggregateData] 开始聚合', { dimensions, metrics, dataLength: data?.length });
-
-  // 调试：打印前3行数据
-  if (data && data.length > 0) {
-    console.log('[aggregateData] 数据示例（前3行）:', JSON.stringify(data.slice(0, 3)));
-    // 检查数据类型
-    const firstRow = data[0];
-    dimensions.forEach(d => {
-      console.log(`[aggregateData] 维度 ${d}: 值=${firstRow[d]}, typeof=${typeof firstRow[d]}`);
-    });
-    metrics.forEach(m => {
-      console.log(`[aggregateData] 指标 ${m}: 值=${firstRow[m]}, typeof=${typeof firstRow[m]}, parseFloat=${parseFloat(firstRow[m])}`);
-    });
-  }
-
-  if (!dimensions.length || !metrics.length) {
-    console.log('[aggregateData] 维度或指标为空，返回空');
-    console.log('[aggregateData] dimensions.length =', dimensions.length, 'metrics.length =', metrics.length);
-    return { labels: [], values: [] };
-  }
-
-  // 按维度分组聚合
-  const grouped = {};
-
-  data.forEach((row, idx) => {
-    // 维度值：转为字符串作为 key，保留原值作为 label
-    const keyParts = dimensions.map(d => {
-      const v = row[d];
-      return v == null ? '' : String(v);
-    });
-    const key = keyParts.join('_');
-    if (!grouped[key]) {
-      grouped[key] = { label: keyParts.join(' / '), sum: 0, count: 0 };
-    }
-
-    metrics.forEach(m => {
-      const raw = row[m];
-      const val = parseFloat(raw);
-      if (!isNaN(val)) {
-        grouped[key].sum += val;
-        grouped[key].count += 1;
-      }
-    });
-  });
-
-  const labels = Object.values(grouped).map(g => g.label);
-  const values = Object.values(grouped).map(g => Math.round(g.sum * 100) / 100);
-
-  console.log('[aggregateData] 聚合结果: labels =', labels, 'values =', values);
-
-  return { labels, values };
 }
 
 // ============================================================
@@ -536,27 +367,8 @@ initAuth({
   }
 });
 
-// 图表模块（延迟初始化，不在启动时渲染）
-
 // 视图模式切换模块
-initViewMode($viewMode, {
-  onModeChange: (mode) => {
-    console.log('[App] onModeChange 回调被调用，切换到:', mode);
-    state.viewMode = mode;
-    if (mode === 'chart') {
-      // 切换到图形模式
-      $toolbar.style.display = 'none';
-      $colMgr.style.display = 'none';
-      renderChartMode();
-    } else {
-      // 切换到表格模式
-      $toolbar.style.display = '';
-      $colMgr.style.display = '';
-      clearConfig();
-      renderTable();
-    }
-  }
-});
+initViewMode($viewMode);
 
 // 登录按钮点击事件
 document.getElementById('authBtn').addEventListener('click', () => {

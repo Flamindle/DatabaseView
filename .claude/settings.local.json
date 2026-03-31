@@ -15,7 +15,9 @@
       "Bash(python manage.py check)",
       "Bash(node --check src/app.js)",
       "Bash(node --check src/components/ViewMode/ViewMode.js)",
-      "Bash(node --check src/components/Chart/ChartView.js)"
+      "Bash(node --check src/components/Chart/ChartView.js)",
+      "Bash(python -c \":*)",
+      "Bash(python3 -c \":*)"
     ]
   }
 }

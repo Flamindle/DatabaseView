@@ -14,7 +14,14 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    emptyOutDir: true
+    emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        chart: path.resolve(__dirname, 'src/chart.html'),
+        dashboard: path.resolve(__dirname, 'src/dashboard.html')
+      }
+    }
   },
   resolve: {
     alias: {

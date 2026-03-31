@@ -4,15 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MySQL 数据库查看器</title>
-  <script type="module" crossorigin src="/assets/index-CvfF0vRl.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-DKcZGRrT.css">
+  <script type="module" crossorigin src="/assets/main-_uKavXAa.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/ThemeToggle-BJ6eEzb0.js">
+  <link rel="stylesheet" crossorigin href="/assets/ThemeToggle-CI3pOEBg.css">
+  <link rel="stylesheet" crossorigin href="/assets/main-DVgj-3DN.css">
 </head>
 <body>
   <div class="container">
-    <h1 style="display:flex;align-items:center;gap:16px;">
+    <h1 style="display:flex;align-items:center;gap:12px;">
       MySQL 数据库查看器
       <button id="themeToggle" style="height:32px;padding:0 16px;border-radius:20px;border:none;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(102,126,234,0.4);" title="切换主题">浅色</button>
       <button id="authBtn" style="height:32px;padding:0 16px;border-radius:20px;border:none;background:var(--primary);color:#fff;font-size:12px;font-weight:600;cursor:pointer;" title="管理员登录">登录</button>
+      <div id="viewModeContainer" style="margin-left:auto;"></div>
     </h1>
 
     <!-- 连接表单卡片 -->
@@ -20,8 +23,8 @@
       <div id="connectionContainer"></div>
     </div>
 
-    <!-- 视图模式切换 -->
-    <div id="viewModeContainer"></div>
+    <!-- 消息提示 -->
+    <div id="message" class="message" style="display:none;"></div>
 
     <!-- 工具栏 + 字段配置卡片 -->
     <div class="card" id="dataCard">

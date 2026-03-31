@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>仪表板 - MySQL 数据库查看器</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='3' y='3' width='7' height='9' rx='1' fill='%234f6ef7'/><rect x='14' y='3' width='7' height='5' rx='1' fill='%23764ba2'/><rect x='14' y='12' width='7' height='9' rx='1' fill='%234f6ef7'/><rect x='3' y='16' width='7' height='5' rx='1' fill='%23764ba2'/></svg>">
+</head>
+<body>
+  <div class="container">
+    <!-- 页面顶部导航 -->
+    <div class="page-header">
+      <div class="page-title">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="9" rx="1"/>
+          <rect x="14" y="3" width="7" height="5" rx="1"/>
+          <rect x="14" y="12" width="7" height="9" rx="1"/>
+          <rect x="3" y="16" width="7" height="5" rx="1"/>
+        </svg>
+        <h1>仪表板</h1>
+      </div>
+      <div class="page-actions">
+        <div class="datasource-info" id="datasourceInfo">未连接数据库</div>
+        <button id="themeToggle" class="btn-secondary" style="height:32px;padding:0 16px;border-radius:20px;" title="切换主题">浅色</button>
+        <button id="backBtn" class="btn-secondary" style="height:32px;padding:0 16px;border-radius:20px;">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+          返回主页
+        </button>
+      </div>
+    </div>
+
+    <!-- 消息提示 -->
+    <div id="message" class="message" style="display:none;"></div>
+
+    <!-- 连接状态区域 -->
+    <div class="card" id="connectionSection">
+      <h3 style="margin-bottom:16px;">数据库连接</h3>
+      <div id="connectionForm"></div>
+    </div>
+
+    <!-- 仪表板区域 -->
+    <div id="dashboardContainer"></div>
+  </div>
+
+  <script type="module" src="/src/dashboard.js"></script>
+</body>
+</html>
