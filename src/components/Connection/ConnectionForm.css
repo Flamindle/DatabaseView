@@ -21,8 +21,102 @@
   letter-spacing: 0.3px;
 }
 
+/* 数据库类型选择 */
+.db-type-group {
+  margin-right: 4px;
+}
+
+.db-type-group select {
+  min-width: 150px;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+/* MySQL 数据库下拉行 */
+.db-select-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.db-select-row select {
+  flex: 1;
+  min-width: 180px;
+}
+
+/* MySQL / SQLite 字段组 */
+.mysql-fields,
+.sqlite-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 20px;
+  align-items: flex-end;
+}
+
 .form-actions {
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+/* SQLite 拖拽区域 */
+.sqlite-drop-zone {
+  width: 100%;
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  padding: 16px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--bg-secondary);
+}
+
+.sqlite-drop-zone:hover,
+.sqlite-drop-zone.dragover {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 5%, var(--bg-secondary));
+}
+
+.sqlite-drop-zone .drop-zone-text {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.sqlite-drop-zone .drop-zone-text:first-child {
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+/* SQLite 路径输入行 */
+.sqlite-path-row {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  width: 100%;
+}
+
+.sqlite-path-row input {
+  flex: 1;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.sqlite-path-row input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+/* 已选文件名提示 */
+.sqlite-file-name {
+  font-size: 12px;
+  color: var(--success);
+  margin-top: 4px;
+  width: 100%;
 }

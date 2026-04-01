@@ -1,24 +1,19 @@
 /**
  * 连接表单组件
+ * 支持 MySQL 数据库连接
  */
 import { getDatabases, connectDb } from '../../services/api.js';
 import { saveConfig, loadConfig } from '../../utils/storage.js';
-import { setState } from '../../store/state.js';
 
 let elements = {};
-let onDatabaseConnected = null;
 let onTablesLoaded = null;
 
 /**
  * 初始化连接表单
- * @param {HTMLElement} container - 挂载容器
- * @param {Object} callbacks - 回调函数
  */
 function init(container, callbacks = {}) {
-  onDatabaseConnected = callbacks.onDatabaseConnected;
   onTablesLoaded = callbacks.onTablesLoaded;
 
-  // 创建表单 HTML
   container.innerHTML = `
     <div class="connection-form">
       <div class="form-group">
@@ -39,7 +34,7 @@ function init(container, callbacks = {}) {
       </div>
       <div class="form-group">
         <label>数据库</label>
-        <div style="display:flex;gap:8px;align-items:center">
+        <div class="db-select-row">
           <button type="button" class="btn-secondary" id="getDbBtn">获取列表</button>
           <select id="database" disabled>
             <option value="">请先获取数据库</option>
@@ -53,13 +48,12 @@ function init(container, callbacks = {}) {
       </div>
     </div>
     <div id="message" class="message hidden"></div>
-    <div id="debugPanel" style="display:none;margin-top:16px;padding:12px;background:var(--bg-secondary);border-radius:8px;border:1px solid var(--border);">
+    <div id="debugPanel" style="display:none;margin-top:16px;padding:12px;background:var(--bg);border-radius:8px;border:1px solid var(--border);">
       <div style="font-weight:600;margin-bottom:8px;">调试信息</div>
       <div id="debugContent" style="font-size:12px;font-family:monospace;white-space:pre-wrap;word-break:break-all;"></div>
     </div>
   `;
 
-  // 获取元素引用
   elements = {
     host: document.getElementById('host'),
     port: document.getElementById('port'),
@@ -73,10 +67,7 @@ function init(container, callbacks = {}) {
     message: document.getElementById('message')
   };
 
-  // 恢复保存的配置
   restoreConfig();
-
-  // 绑定事件
   bindEvents();
 }
 
@@ -92,28 +83,40 @@ function restoreConfig() {
 
 function bindEvents() {
   elements.getDbBtn.addEventListener('click', handleGetDatabases);
+  elements.database.addEventListener('change', () => {
+    elements.connectBtn.disabled = !elements.database.value;
+    saveCurrentConfig();
+  });
   elements.connectBtn.addEventListener('click', handleConnect);
   elements.debugBtn.addEventListener('click', toggleDebugPanel);
 }
 
+function saveCurrentConfig() {
+  const config = {
+    host: elements.host.value,
+    port: elements.port.value,
+    user: elements.user.value,
+    password: elements.password.value,
+    database: elements.database.value
+  };
+  saveConfig(config);
+}
+
+// ============================================================
+// 调试面板
+// ============================================================
 let debugVisible = false;
 
 function toggleDebugPanel() {
   debugVisible = !debugVisible;
   const panel = document.getElementById('debugPanel');
-  if (panel) {
-    panel.style.display = debugVisible ? 'block' : 'none';
-  }
+  if (panel) panel.style.display = debugVisible ? 'block' : 'none';
 }
 
 function showDebugInfo(info) {
   const content = document.getElementById('debugContent');
-  if (content) {
-    content.textContent = typeof info === 'string' ? info : JSON.stringify(info, null, 2);
-  }
-  if (!debugVisible) {
-    toggleDebugPanel();
-  }
+  if (content) content.textContent = typeof info === 'string' ? info : JSON.stringify(info, null, 2);
+  if (!debugVisible) toggleDebugPanel();
 }
 
 function showMessage(text, isSuccess = true) {
@@ -121,6 +124,9 @@ function showMessage(text, isSuccess = true) {
   elements.message.className = `message ${isSuccess ? 'success' : 'error'}`;
 }
 
+// ============================================================
+// 获取数据库列表
+// ============================================================
 async function handleGetDatabases() {
   const params = {
     host: elements.host.value.trim(),
@@ -134,74 +140,65 @@ async function handleGetDatabases() {
     return;
   }
 
-  // 保存配置
-  saveConfig(params);
-
+  saveCurrentConfig();
   const result = await getDatabases(params);
 
   if (result.success) {
     showMessage(result.message);
-    // 填充数据库下拉框
     elements.database.innerHTML = '<option value="">请选择数据库</option>';
     result.databases.forEach(db => {
-      const option = document.createElement('option');
-      option.value = db;
-      option.textContent = db;
-      elements.database.appendChild(option);
+      const opt = document.createElement('option');
+      opt.value = db;
+      opt.textContent = db;
+      elements.database.appendChild(opt);
     });
-    // 启用下拉框和连接按钮
     elements.database.disabled = false;
-    elements.connectBtn.disabled = false;
-
-    setState('databases', result.databases);
   } else {
     showMessage(result.message, false);
   }
 }
 
+// ============================================================
+// 连接数据库
+// ============================================================
 async function handleConnect() {
-  const params = {
-    host: elements.host.value.trim(),
-    port: elements.port.value.trim(),
-    user: elements.user.value.trim(),
-    password: elements.password.value.trim(),
-    database: elements.database.value.trim()
-  };
-
-  if (!params.database) {
+  const database = elements.database.value.trim();
+  if (!database) {
     showMessage('请选择数据库', false);
     return;
   }
 
-  // 保存配置
-  saveConfig(params);
+  const params = {
+    dbType: 'mysql',
+    host: elements.host.value.trim(),
+    port: elements.port.value.trim(),
+    user: elements.user.value.trim(),
+    password: elements.password.value.trim(),
+    database
+  };
 
+  saveCurrentConfig();
   const result = await connectDb(params);
 
   if (result.success) {
     showMessage(result.message);
-    // 更新状态
-    setState('connection', {
-      host: params.host,
-      port: params.port,
-      user: params.user,
-      password: params.password,
-      database: params.database,
-      connected: true
-    });
-
-    if (onTablesLoaded) {
-      onTablesLoaded(result.tables);
-    }
+    elements.connectBtn.disabled = true;
+    elements.disconnectBtn.disabled = false;
+    window.dispatchEvent(new CustomEvent('dbTablesLoaded', {
+      detail: { tables: result.tables, dbType: 'mysql' }
+    }));
+    if (onTablesLoaded) onTablesLoaded(result.tables);
   } else {
     showMessage(result.message, false);
   }
 }
 
+// ============================================================
+// 启用断开按钮
+// ============================================================
 function enableDisconnect(enable = true) {
   elements.connectBtn.disabled = enable;
   elements.disconnectBtn.disabled = !enable;
-  elements.getDbBtn.disabled = enable;
 }
 
 export { init, enableDisconnect, showMessage, showDebugInfo };

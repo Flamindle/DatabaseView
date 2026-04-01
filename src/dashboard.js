@@ -43,10 +43,18 @@ async function init() {
 // ============================================================
 async function tryRestoreConnection() {
   const cfg = loadConfig();
-  if (!cfg || !cfg.host) return;
+  if (!cfg) return;
+
+  // SQLite 自动恢复
+  if (cfg.dbType === 'sqlite' && cfg.dbPath) {
+    await connectAndShow();
+    return;
+  }
+
+  // MySQL 自动恢复
+  if (!cfg.host) return;
 
   try {
-    // 获取数据库列表
     const dbResp = await fetch('http://localhost:3000/get-databases', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -55,7 +63,6 @@ async function tryRestoreConnection() {
     const dbResult = await dbResp.json();
     if (!dbResult.success) return;
 
-    // 填充数据库下拉框
     const databaseSelect = document.getElementById('database');
     if (databaseSelect) {
       databaseSelect.innerHTML = '<option value="">请选择数据库</option>';
@@ -69,7 +76,6 @@ async function tryRestoreConnection() {
 
       if (cfg.database && dbResult.databases.includes(cfg.database)) {
         databaseSelect.value = cfg.database;
-        // 自动触发连接
         await connectAndShow();
       }
     }
@@ -83,7 +89,13 @@ async function tryRestoreConnection() {
 // ============================================================
 async function connectAndShow() {
   const cfg = loadConfig();
-  if (!cfg || !cfg.database) return;
+  if (!cfg) return;
+
+  if (cfg.dbType === 'sqlite') {
+    if (!cfg.dbPath) return;
+  } else {
+    if (!cfg.database) return;
+  }
 
   try {
     const connResp = await fetch('http://localhost:3000/connect', {
@@ -94,7 +106,6 @@ async function connectAndShow() {
     const connResult = await connResp.json();
     if (!connResult.success) return;
 
-    // 隐藏连接区域，显示仪表板
     document.getElementById('connectionSection').style.display = 'none';
     updateDatasourceInfo();
     showDashboard();
@@ -109,7 +120,13 @@ async function connectAndShow() {
 function updateDatasourceInfo() {
   const cfg = loadConfig();
   const info = document.getElementById('datasourceInfo');
-  if (cfg && cfg.database) {
+  if (!cfg) return;
+
+  if (cfg.dbType === 'sqlite' && cfg.dbPath) {
+    const fileName = cfg.dbPath.split(/[/\\]/).pop();
+    info.textContent = `SQLite: ${fileName}`;
+    info.className = 'datasource-info connected';
+  } else if (cfg.database) {
     info.textContent = `${cfg.host}/${cfg.database}`;
     info.className = 'datasource-info connected';
   } else {

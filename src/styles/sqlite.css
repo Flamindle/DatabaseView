@@ -1,0 +1,139 @@
+/* ============================================================
+   SQLite 页面专用样式
+   ============================================================ */
+
+/* 页面顶部导航 */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  border-radius: 8px 8px 0 0;
+  margin-bottom: 0;
+}
+
+.page-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.page-title svg {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.page-title h1 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.page-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.datasource-info {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 4px 12px;
+  background: var(--bg-secondary);
+  border-radius: 20px;
+  border: 1px solid var(--border);
+}
+
+.datasource-info.connected {
+  color: var(--success);
+  border-color: var(--success);
+}
+
+/* 拖拽区域 */
+.sqlite-drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 48px 32px;
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--bg-secondary);
+  margin-bottom: 12px;
+}
+
+.sqlite-drop-zone:hover,
+.sqlite-drop-zone.dragover {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 5%, var(--bg-secondary));
+}
+
+.sqlite-drop-zone .drop-zone-icon {
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+
+.sqlite-drop-zone .drop-zone-text {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.sqlite-drop-zone .drop-zone-hint {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* 已选文件名 */
+.sqlite-file-name {
+  font-size: 13px;
+  color: var(--success);
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* 数据信息 */
+.data-info {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+/* 分页 */
+#paginationContainer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#paginationContainer button {
+  min-width: 32px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text);
+}
+
+#paginationContainer button:hover:not(:disabled) {
+  background: var(--bg-secondary);
+}
+
+#paginationContainer button.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+#paginationContainer button.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

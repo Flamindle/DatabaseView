@@ -4,7 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-MySQL 数据库查看工具，逐步演化为轻量级 BI 工具（类 FineBI）。
+MySQL / SQLite 数据库查看工具，逐步演化为轻量级 BI 工具（类 FineBI）。
+
+采用**多页面架构**：
+- 主页（`/`）：表格模式，查询浏览数据
+- 图形模式（`/src/chart.html`）：独立的拖拽式数据可视化页面
+- 仪表板（`/src/dashboard.html`）：独立的多图表仪表板页面
 
 采用**读写分离架构**：
 - Node.js 后端（端口 3000）：查询功能
@@ -41,9 +46,9 @@ npm run django    # 仅启动 Django API（端口 9000）
 | 层级 | 技术 | 版本 | 用途 |
 |------|------|------|------|
 | 前端 | 原生 JS + Vite | 8.x | 用户界面 |
-| Node.js 后端 | Express + mysql2 | ^4.18 / ^3.6 | 查询功能 |
+| Node.js 后端 | Express + mysql2 + sqlite3 | ^4.18 / ^3.6 / ^5.1 | 查询功能 |
 | Django 后端 | Django + DRF | 4.2.x / 3.14 | 增删改 + 认证 |
-| 数据库 | MySQL | 5.7+ / 8.0 | 数据存储 |
+| 数据库 | MySQL / SQLite3 | 5.7+ / 8.0 / 3.x | 数据存储 |
 
 ---
 
@@ -63,10 +68,12 @@ npm run django    # 仅启动 Django API（端口 9000）
 DatabaseView/
 ├── server/                    # Node.js 后端（查询）
 │   ├── index.js              # 服务入口
-│   ├── db/mysql.js           # MySQL 连接管理
+│   ├── db/
+│   │   ├── mysql.js         # MySQL 连接管理
+│   │   └── sqlite.js        # SQLite 连接管理
 │   └── routes/              # API 路由
-│       ├── database.js      # /get-databases, /connect
-│       └── query.js         # /query-table, /disconnect
+│       ├── database.js      # /get-databases, /connect（支持 MySQL + SQLite）
+│       └── query.js         # /query-table, /disconnect（支持 MySQL + SQLite）
 ├── django_api/               # Django 后端（增删改 + 认证）
 │   ├── manage.py            # Django 管理脚本
 │   ├── config/              # Django 项目配置
@@ -79,8 +86,12 @@ DatabaseView/
 │   ├── .env                # 环境配置
 │   ├── requirements.txt    # Python 依赖
 │   └── create_auth_user.py # 创建用户脚本
-├── src/                     # 前端源码（Vite 构建）
-│   ├── app.js              # 主入口
+├── src/                     # 前端源码（Vite 多页面构建）
+│   ├── app.js              # 主页入口（表格模式）
+│   ├── chart.html          # 图形模式页面入口
+│   ├── chart.js            # 图形模式 JS 逻辑
+│   ├── dashboard.html       # 仪表板页面入口
+│   ├── dashboard.js         # 仪表板 JS 逻辑
 │   ├── services/
 │   │   ├── api.js         # Node.js API 调用（查询）
 │   │   └── djangoApi.js   # Django API 调用（增删改 + 认证）
@@ -97,14 +108,23 @@ DatabaseView/
 │   │   ├── Auth/           # 登录模态框
 │   │   ├── Chart/          # 数据可视化（Chart.js）
 │   │   │   ├── ChartView.js
-│   │   │   ├── ChartView.css
-│   │   │   └── ChartToolbar.js
-│   │   ├── ViewMode/       # 视图模式切换
+│   │   │   └── ChartView.css
+│   │   ├── Dashboard/      # 仪表板
+│   │   │   ├── DashboardView.js
+│   │   │   ├── DashboardView.css
+│   │   │   ├── DashboardCard.js
+│   │   │   ├── DashboardCardModal.js
+│   │   │   ├── DashboardCardModal.css
+│   │   │   └── DashboardUtils.js
+│   │   ├── ViewMode/       # 视图模式切换（标题行按钮）
 │   │   │   ├── ViewMode.js
 │   │   │   └── ViewMode.css
 │   │   └── Theme/          # 主题切换
 │   └── styles/             # 全局样式（主题变量）
 ├── dist/                    # 生产构建输出
+│   ├── index.html          # 主页（表格模式）
+│   ├── src/chart.html       # 图形模式
+│   └── src/dashboard.html    # 仪表板
 └── package.json
 ```
 
@@ -114,12 +134,14 @@ DatabaseView/
 
 ### Node.js API（查询）
 
+所有接口通过 `dbType` 参数（`mysql` | `sqlite`）区分数据库类型：
+
 | 路由 | 方法 | 功能 |
 |------|------|------|
-| `/get-databases` | POST | 获取非系统数据库列表 |
-| `/connect` | POST | 连接指定数据库，返回表列表 |
-| `/query-table` | POST | 查询表数据，支持分页、排序 |
-| `/disconnect` | POST | 断开连接 |
+| `/get-databases` | POST | 获取 MySQL 非系统数据库列表 |
+| `/connect` | POST | 连接 MySQL 或 SQLite，返回表列表；参数 `{dbType:'sqlite', dbPath:'...'}` |
+| `/query-table` | POST | 查询表数据，支持分页、排序；参数中包含 `dbType` 区分数据库 |
+| `/disconnect` | POST | 断开所有连接 |
 
 ### Django API（增删改 + 认证）
 
@@ -182,13 +204,15 @@ X-Database-Name: mydb
 ## 已实现功能
 
 ### 查询功能（Node.js）
-- MySQL 数据库连接和连接持久化（localStorage）
+- **双数据库支持**：连接表单左上角可切换 MySQL / SQLite
+  - MySQL：主机/端口/用户名/密码 + 数据库下拉选择
+  - SQLite：本地 .db 文件选择器（支持拖放或点击选择）
+- 连接配置持久化到 localStorage，刷新自动恢复
 - 表列表浏览 + 数据查询（分页、排序）
 - **字段管理**：自定义显隐、拖拽调整顺序、右键菜单
 - **列宽调整**：鼠标拖拽改变列宽
-- 时间字段自动转换为中国时区
+- MySQL 时间字段自动转换为中国时区
 - 首列固定 + 横向滚动 + 表头固定
-- 页面刷新自动恢复上次的数据库/表/数据
 
 ### 用户认证（Django）
 - **Session 认证**：使用 Cookie 存储 Session
@@ -211,15 +235,28 @@ X-Database-Name: mydb
 - **视图模式**：全字段、自定义字段
 
 ### 数据可视化（Chart.js）
-- **视图切换**：连接表单下方有"表格模式/图形模式"切换按钮
+
+采用**多页面架构**：表格模式在主页，图形模式和仪表板各自独立页面。
+
+#### 图形模式（`/src/chart.html`）
+- **独立页面**：`window.open('/src/chart.html')`，不会遮挡主页内容
 - **拖拽式字段映射**：
   - 左侧显示可用字段（自动识别文本/数值/日期类型）
   - 拖拽字段到"维度"区域（用于分类/标签）
-  - 拖拽字段到"指标"区域（用于数值计算）
+  - 拖拽字段到"指标"区域（用于数值计算，只接受数值字段）
 - **图表类型**：支持柱状图、饼图、折线图
-- **自动聚合**：按维度自动求和/聚合数据
-- **主题适配**：图表颜色自动适配当前主题
-- **实时更新**：拖拽配置后自动更新图表
+- **实时更新**：拖拽配置后自动聚合数据并渲染图表
+- **自动恢复**：从 localStorage 读取上次连接和查询的表，自动加载数据
+- **返回主页**：右上角"返回主页"按钮
+
+#### 仪表板（`/src/dashboard.html`）
+- **独立页面**：`window.open('/src/dashboard.html')`
+- **多图表卡片**：网格布局，每张卡片独立配置数据源
+- **添加卡片**：4步向导（选表→选维度→选指标→选图表类型）
+- **卡片管理**：右上角切换图表类型、编辑、删除
+- **拖拽排序**：鼠标拖拽卡片手柄重新排列
+- **持久化**：卡片配置存入 localStorage，刷新不丢失
+- **返回主页**：右上角"返回主页"按钮
 
 ---
 
@@ -269,8 +306,8 @@ CREATE TABLE `auth_user` (
 - [x] 阶段 2：查询增强（自定义 SQL、分页）
 - [x] 阶段 3：增删改功能（Django 集成）
 - [x] 阶段 3.5：用户认证系统（auth_user 登录）
-- [!] 阶段 4：数据可视化（柱状图、饼图、折线图）：没有完成，操作之后，并不会生成图表，或者是只生成了xy轴，却没有数据
-- [ ] 阶段 5：仪表板（多图表卡片、拖拽布局）
+- [x] 阶段 4：数据可视化（独立页面，拖拽式图表配置，柱状图/饼图/折线图）
+- [x] 阶段 5：仪表板（独立页面，多图表卡片，拖拽布局）
 - [ ] 阶段 6：协作与导出（数据导入/导出）
 
 ---

@@ -75,12 +75,20 @@ function disconnect() {
  */
 async function doQueryDashboard(params) {
   try {
-    // 先连接数据库
     const dbConfig = JSON.parse(localStorage.getItem('mysql_viewer_config') || '{}');
-    if (!dbConfig.database) {
-      return { success: false, message: '未连接数据库' };
+
+    // 检查连接状态
+    if (dbConfig.dbType === 'sqlite') {
+      if (!dbConfig.dbPath) {
+        return { success: false, message: '未连接 SQLite 数据库' };
+      }
+    } else {
+      if (!dbConfig.database) {
+        return { success: false, message: '未连接数据库' };
+      }
     }
 
+    // 连接数据库
     const connectResp = await fetch(`${API_BASE}/connect`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -98,7 +106,8 @@ async function doQueryDashboard(params) {
       body: JSON.stringify({
         tableName: params.tableName,
         page: params.page || 1,
-        pageSize: params.pageSize || 500
+        pageSize: params.pageSize || 500,
+        dbType: dbConfig.dbType || 'mysql'
       })
     });
     const queryResult = await queryResp.json();

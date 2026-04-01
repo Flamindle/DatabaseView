@@ -14,7 +14,7 @@ import './components/Auth/LoginModal.css';
 import './components/ViewMode/ViewMode.css';
 
 import { init as initConnection } from './components/Connection/ConnectionForm.js';
-import { init as initToolbar } from './components/Toolbar/TableToolbar.js';
+import { init as initToolbar, populateTables } from './components/Toolbar/TableToolbar.js';
 import { init as initColumnManager } from './components/Table/ColumnManager.js';
 import { init as initTheme } from './components/Theme/ThemeToggle.js';
 import { init as initCrudModal, showAdd, showEdit } from './components/CrudModal/CrudModal.js';
@@ -29,6 +29,7 @@ import { deleteRecord } from './services/djangoApi.js';
 // ============================================================
 const state = {
   connection: { host: '', port: '3306', user: 'root', password: '', database: '', connected: false },
+  dbType: 'mysql',  // 'mysql' | 'sqlite'
   tables: [],
   currentTable: '',
   lastQueryResult: null,
@@ -182,7 +183,8 @@ async function doQuery(tableName, sortField = '', sortOrder = 'ASC', page = 1) {
         sortField,
         sortOrder,
         page,
-        pageSize: state.pagination.pageSize
+        pageSize: state.pagination.pageSize,
+        dbType: state.dbType
       })
     });
     const result = await resp.json();
@@ -298,30 +300,22 @@ function getColumnsConfig() {
 // 组件初始化
 // ============================================================
 
-// 连接表单
-initConnection($conn, {
-  onTablesLoaded(tables) {
-    state.tables = tables;
-    state.connection.connected = true;
+// 连接表单（监听 dbTablesLoaded 事件，由 ConnectionForm 连接成功后触发）
+initConnection($conn, {});
 
-    const tableSelect = document.getElementById('tableSelect');
-    const queryBtn = document.getElementById('queryBtn');
-    if (tableSelect) {
-      tableSelect.innerHTML = '<option value="">请选择表</option>';
-      tables.forEach(t => {
-        const opt = document.createElement('option');
-        opt.value = t;
-        opt.textContent = t;
-        tableSelect.appendChild(opt);
-      });
-      tableSelect.disabled = false;
-      if (queryBtn) queryBtn.disabled = false;
-
-      const cfg = loadConfig();
-      if (cfg && cfg.tableName && tables.includes(cfg.tableName)) {
-        tableSelect.value = cfg.tableName;
-      }
-    }
+// 连接成功：监听 dbTablesLoaded 事件，填充工具栏表下拉框
+// 注意：必须在 initConnection 调用前注册（同步执行）
+window.addEventListener('dbTablesLoaded', (e) => {
+  const { tables, dbType } = e.detail;
+  state.tables = tables;
+  state.dbType = dbType || 'mysql';
+  state.connection.connected = true;
+  state.currentTable = '';
+  populateTables(tables);
+  const cfg = loadConfig();
+  if (cfg && cfg.tableName && tables.includes(cfg.tableName)) {
+    const select = document.getElementById('toolbarTableSelect');
+    if (select) select.value = cfg.tableName;
   }
 });
 
@@ -337,6 +331,7 @@ initToolbar($toolbar, {
     doQuery(tableName, '', 'ASC');
   }
 });
+
 
 // 列管理器
 initColumnManager($colMgr, {
@@ -381,72 +376,40 @@ document.getElementById('authBtn').addEventListener('click', () => {
   }
 });
 
+// SQLite 按钮：打开独立页面
+document.getElementById('sqliteBtn').addEventListener('click', () => {
+  window.open('/src/sqlite.html', '_blank', 'width=1200,height=800');
+});
+
 // ============================================================
 // 页面加载时自动恢复状态
 // ============================================================
-(async function restoreState() {
+/**
+ * 页面加载时自动恢复状态
+ * 不再重复调用 /connect，而是依赖 ConnectionForm 的 dbTablesLoaded 事件
+ * 只负责：如果已保存 tableName 则自动触发查询
+ */
+(function restoreState() {
   const cfg = loadConfig();
-  if (!cfg || !cfg.host) return;
+  if (!cfg || !cfg.tableName) return;
 
-  try {
-    const dbResp = await fetch('http://localhost:3000/get-databases', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ host: cfg.host, port: cfg.port, user: cfg.user, password: cfg.password || '' })
-    });
-    const dbResult = await dbResp.json();
-    if (!dbResult.success) return;
-
-    const databaseSelect = document.getElementById('database');
-    if (databaseSelect) {
-      databaseSelect.innerHTML = '<option value="">请选择数据库</option>';
-      dbResult.databases.forEach(db => {
-        const opt = document.createElement('option');
-        opt.value = db;
-        opt.textContent = db;
-        databaseSelect.appendChild(opt);
-      });
-      databaseSelect.disabled = false;
-      const connectBtn = document.getElementById('connectBtn');
-      if (connectBtn) connectBtn.disabled = false;
-
-      if (cfg.database && dbResult.databases.includes(cfg.database)) {
-        databaseSelect.value = cfg.database;
-      } else {
-        return;
-      }
+  // 等待 dbTablesLoaded 事件触发后，选中已保存的表并查询
+  function tryRestore() {
+    const tableSelect = document.getElementById('toolbarTableSelect');
+    if (!tableSelect || tableSelect.options.length <= 1) {
+      // 表还没加载完，稍后再试
+      setTimeout(tryRestore, 200);
+      return;
     }
-
-    const connResp = await fetch('http://localhost:3000/connect', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ host: cfg.host, port: cfg.port, user: cfg.user, password: cfg.password || '', database: cfg.database })
-    });
-    const connResult = await connResp.json();
-    if (!connResult.success) return;
-
-    const tableSelect = document.getElementById('tableSelect');
-    const queryBtn = document.getElementById('queryBtn');
-    if (tableSelect) {
-      tableSelect.innerHTML = '<option value="">请选择表</option>';
-      connResult.tables.forEach(t => {
-        const opt = document.createElement('option');
-        opt.value = t;
-        opt.textContent = t;
-        tableSelect.appendChild(opt);
-      });
-      tableSelect.disabled = false;
-      if (queryBtn) queryBtn.disabled = false;
-
-      if (cfg.tableName && connResult.tables.includes(cfg.tableName)) {
-        tableSelect.value = cfg.tableName;
-        setTimeout(() => doQuery(cfg.tableName, '', 'ASC'), 100);
-      }
+    const tables = Array.from(tableSelect.options).map(o => o.value).filter(v => v);
+    if (tables.includes(cfg.tableName)) {
+      tableSelect.value = cfg.tableName;
+      doQuery(cfg.tableName, '', 'ASC');
     }
-
-  } catch (e) {
-    // 静默失败
   }
+
+  // 延迟执行，确保组件已初始化
+  setTimeout(tryRestore, 500);
 })();
 
 // 确保事件处理器已绑定

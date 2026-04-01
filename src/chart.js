@@ -64,10 +64,18 @@ async function init() {
 // ============================================================
 async function tryRestoreConnection() {
   const cfg = loadConfig();
-  if (!cfg || !cfg.host) return;
+  if (!cfg) return;
+
+  // SQLite 自动恢复
+  if (cfg.dbType === 'sqlite' && cfg.dbPath) {
+    await connectAndLoad();
+    return;
+  }
+
+  // MySQL 自动恢复
+  if (!cfg.host) return;
 
   try {
-    // 获取数据库列表
     const dbResp = await fetch('http://localhost:3000/get-databases', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -76,7 +84,6 @@ async function tryRestoreConnection() {
     const dbResult = await dbResp.json();
     if (!dbResult.success) return;
 
-    // 填充数据库下拉框
     const databaseSelect = document.getElementById('database');
     if (databaseSelect) {
       databaseSelect.innerHTML = '<option value="">请选择数据库</option>';
@@ -90,7 +97,6 @@ async function tryRestoreConnection() {
 
       if (cfg.database && dbResult.databases.includes(cfg.database)) {
         databaseSelect.value = cfg.database;
-        // 自动触发连接
         await connectAndLoad();
       }
     }
@@ -240,7 +246,13 @@ function aggregateData(data, dimensions, metrics) {
 function updateDatasourceInfo() {
   const cfg = loadConfig();
   const info = document.getElementById('datasourceInfo');
-  if (cfg && cfg.database) {
+  if (!cfg) return;
+
+  if (cfg.dbType === 'sqlite' && cfg.dbPath) {
+    const fileName = cfg.dbPath.split(/[/\\]/).pop();
+    info.textContent = `SQLite: ${fileName}`;
+    info.className = 'datasource-info connected';
+  } else if (cfg.database) {
     info.textContent = `${cfg.host}/${cfg.database}`;
     info.className = 'datasource-info connected';
   } else {
