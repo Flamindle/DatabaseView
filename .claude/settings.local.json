@@ -35,7 +35,18 @@
       "Skill(playwright-cli)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:9000/api/auth/status)",
       "Bash(curl -s http://localhost:9000/api/auth/status)",
-      "Bash(python manage.py runserver 9000)"
+      "Bash(python manage.py runserver 9000)",
+      "mcp__ide__getDiagnostics",
+      "Bash(playwright-cli goto:*)",
+      "Bash(playwright-cli snapshot:*)",
+      "Bash(playwright-cli fill:*)",
+      "Bash(playwright-cli click:*)",
+      "Bash(playwright-cli eval:*)",
+      "Bash(playwright-cli reload:*)",
+      "Bash(playwright-cli localstorage-set:*)",
+      "Bash(playwright-cli select:*)",
+      "Bash(grep:*)",
+      "Bash(pkill -f \"vite\")"
     ]
   }
 }

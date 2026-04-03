@@ -32,8 +32,9 @@ function buildTable(container, fields, data, config, callbacks = {}) {
   const isWideTable = effectiveFields.length > 5;
   let tableHtml = `<div class="table-wrapper"><table>`;
 
-  // 表头 - 操作列在最前面
+  // 表头 - 选择列 + 操作列
   tableHtml += '<tr>';
+  tableHtml += '<th class="action-column"><input type="checkbox" id="selectAllRows" title="全选"></th>';
   tableHtml += '<th class="action-column">操作</th>';
   effectiveFields.forEach(field => {
     const sortClass = field === currentSortField ? currentSortOrder.toLowerCase() : '';
@@ -44,11 +45,13 @@ function buildTable(container, fields, data, config, callbacks = {}) {
   });
   tableHtml += '</tr>';
 
-  // 数据行 - 操作列在最前面
+  // 数据行 - 选择列 + 操作列
   data.forEach((row, index) => {
     tableHtml += '<tr>';
-    // 操作按钮
+    // 复选框
     const recordId = row.id ?? row.ID ?? row.Id ?? index + 1;
+    tableHtml += `<td class="action-cell"><input type="checkbox" class="row-checkbox" data-id="${recordId}"></td>`;
+    // 操作按钮
     const recordName = row.name ?? row.title ?? row.username ?? `#${recordId}`;
     const recordData = encodeURIComponent(JSON.stringify(row));
     tableHtml += `<td class="action-cell">
@@ -144,6 +147,47 @@ function buildTable(container, fields, data, config, callbacks = {}) {
 
   // 启用列宽拖拽
   enableColumnResize(table);
+
+  // 绑定复选框事件
+  bindCheckboxEvents(table);
+}
+
+// 绑定复选框事件
+function bindCheckboxEvents(table) {
+  const selectAll = table.querySelector('#selectAllRows');
+  const rowCheckboxes = table.querySelectorAll('.row-checkbox');
+
+  if (selectAll) {
+    selectAll.addEventListener('change', () => {
+      rowCheckboxes.forEach(cb => { cb.checked = selectAll.checked; });
+      notifySelectionChange();
+    });
+  }
+
+  rowCheckboxes.forEach(cb => {
+    cb.addEventListener('change', () => {
+      const allChecked = Array.from(rowCheckboxes).every(c => c.checked);
+      const someChecked = Array.from(rowCheckboxes).some(c => c.checked);
+      if (selectAll) selectAll.checked = allChecked;
+      selectAll.indeterminate = someChecked && !allChecked;
+      notifySelectionChange();
+    });
+  });
+}
+
+// 通知 app.js 选中行变化
+function notifySelectionChange() {
+  window.dispatchEvent(new CustomEvent('tableSelectionChange', {
+    detail: { selectedIds: getSelectedIds() }
+  }));
+}
+
+// 获取选中的行 ID
+function getSelectedIds() {
+  const table = document.querySelector('#dataContainer table');
+  if (!table) return [];
+  return Array.from(table.querySelectorAll('.row-checkbox:checked'))
+    .map(cb => cb.dataset.id);
 }
 
 function enableColumnResize(table) {
@@ -203,4 +247,4 @@ function setColumnsConfig(config) {
   columnsConfig = config;
 }
 
-export { buildTable, resetSort, setColumnsConfig };
+export { buildTable, resetSort, setColumnsConfig, getSelectedIds };
