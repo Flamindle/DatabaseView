@@ -24,6 +24,7 @@ log/
 htmlcov/
 .pytest_cache/
 .tox/
+.playwright-cli/
 
 # 环境变量
 .env

@@ -31,7 +31,25 @@
       "Bash(powershell -Command \"Stop-Process -Id 65048 -Force\")",
       "Bash(powershell -Command \"Get-Process -Id 65048 -ErrorAction SilentlyContinue | Stop-Process -Force\")",
       "Bash(powershell -Command \"Stop-Process -Id 31696 -Force\")",
-      "Bash(powershell -Command \"Stop-Process -Id 57040 -Force\")"
+      "Bash(powershell -Command \"Stop-Process -Id 57040 -Force\")",
+      "Skill(playwright-cli)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:9000/api/auth/status)",
+      "Bash(curl -s http://localhost:9000/api/auth/status)",
+      "Bash(python manage.py runserver 9000)",
+      "mcp__ide__getDiagnostics",
+      "Bash(playwright-cli goto:*)",
+      "Bash(playwright-cli snapshot:*)",
+      "Bash(playwright-cli fill:*)",
+      "Bash(playwright-cli click:*)",
+      "Bash(playwright-cli eval:*)",
+      "Bash(playwright-cli reload:*)",
+      "Bash(playwright-cli localstorage-set:*)",
+      "Bash(playwright-cli select:*)",
+      "Bash(grep:*)",
+      "Bash(pkill -f \"vite\")",
+      "Bash(playwright-cli screenshot:*)",
+      "Bash(playwright-cli close:*)",
+      "Bash(playwright-cli open:*)"
     ]
   }
 }

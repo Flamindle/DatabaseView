@@ -20,9 +20,9 @@ import { init as initTheme } from './components/Theme/ThemeToggle.js';
 import { init as initCrudModal, showAdd, showEdit } from './components/CrudModal/CrudModal.js';
 import { init as initAuth, showLoginModal, handleLogout } from './components/Auth/LoginModal.js';
 import { init as initViewMode } from './components/ViewMode/ViewMode.js';
-import { buildTable } from './components/Table/DataTable.js';
+import { buildTable, getSelectedIds } from './components/Table/DataTable.js';
 import { loadConfig, saveConfig } from './utils/storage.js';
-import { deleteRecord } from './services/djangoApi.js';
+import { deleteRecord, batchDeleteRecords } from './services/djangoApi.js';
 
 // ============================================================
 // 全局状态
@@ -126,6 +126,40 @@ function ensurePaginationHandler() {
       showAdd(state.currentTable, fields);
       return;
     }
+
+    // 批量删除按钮
+    const batchDeleteBtn = e.target.closest('#batchDeleteBtn');
+    if (batchDeleteBtn) {
+      if (!state.isLoggedIn) {
+        showMsg('请先登录后才能删除记录', false);
+        return;
+      }
+      const selectedIds = getSelectedIds();
+      if (selectedIds.length === 0) {
+        showMsg('请先选择要删除的记录', false);
+        return;
+      }
+      if (confirm(`确定要删除选中的 ${selectedIds.length} 条记录吗？此操作不可恢复！`)) {
+        handleBatchDelete(selectedIds);
+      }
+      return;
+    }
+
+    // 全表删除按钮
+    const truncateBtn = e.target.closest('#truncateTableBtn');
+    if (truncateBtn) {
+      if (!state.isLoggedIn) {
+        showMsg('请先登录后才能删除记录', false);
+        return;
+      }
+      const total = state.pagination.total;
+      if (confirm(`⚠️ 危险操作！\n\n确定要清空表 "${state.currentTable}" 的所有数据吗？\n共 ${total} 条记录将被永久删除！\n\n此操作不可恢复！`)) {
+        if (confirm('再次确认：删除后数据将无法恢复，确定继续吗？')) {
+          handleTruncateTable();
+        }
+      }
+      return;
+    }
   });
 }
 
@@ -148,6 +182,79 @@ async function handleDelete(recordId) {
   } catch (err) {
     console.error('删除请求失败:', err);
     onCrudError(`删除失败: ${err.message}`);
+  }
+}
+
+// ============================================================
+// 处理批量删除
+// ============================================================
+async function handleBatchDelete(ids) {
+  if (!state.currentTable || ids.length === 0) return;
+
+  console.log('开始批量删除:', ids, '表:', state.currentTable);
+
+  try {
+    const result = await batchDeleteRecords(state.currentTable, ids);
+    console.log('批量删除结果:', result);
+    if (result.success) {
+      onCrudSuccess(`成功删除 ${ids.length} 条记录`);
+    } else {
+      onCrudError(result.message);
+    }
+  } catch (err) {
+    console.error('批量删除请求失败:', err);
+    onCrudError(`批量删除失败: ${err.message}`);
+  }
+}
+
+// ============================================================
+// 处理全表删除
+// ============================================================
+async function handleTruncateTable() {
+  if (!state.currentTable) return;
+
+  console.log('开始全表删除:', state.currentTable);
+
+  try {
+    // 获取所有记录的 ID
+    const resp = await fetch('http://localhost:3000/query-table', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tableName: state.currentTable,
+        page: 1,
+        pageSize: 10000,  // 获取所有记录
+        dbType: state.dbType
+      })
+    });
+    const result = await resp.json();
+
+    if (!result.success) {
+      onCrudError(result.message);
+      return;
+    }
+
+    // 获取所有 ID
+    const allIds = result.data.map(row => row.id ?? row.ID ?? row.Id).filter(id => id !== undefined);
+
+    if (allIds.length === 0) {
+      onCrudSuccess('表中没有数据');
+      return;
+    }
+
+    // 批量删除所有记录
+    const deleteResult = await batchDeleteRecords(state.currentTable, allIds);
+    console.log('全表删除结果:', deleteResult);
+    if (deleteResult.success) {
+      onCrudSuccess(`已清空表 "${state.currentTable}"，共删除 ${allIds.length} 条记录`);
+      // 刷新数据
+      doQuery(state.currentTable, state.sortField, state.sortOrder, 1);
+    } else {
+      onCrudError(deleteResult.message);
+    }
+  } catch (err) {
+    console.error('全表删除请求失败:', err);
+    onCrudError(`全表删除失败: ${err.message}`);
   }
 }
 
@@ -200,6 +307,9 @@ async function doQuery(tableName, sortField = '', sortOrder = 'ASC', page = 1) {
 
       renderTable();
       renderPagination();
+
+      // 触发数据加载事件，启用全表删除按钮
+      window.dispatchEvent(new CustomEvent('dataLoaded'));
     } else {
       showMsg(result.message, false);
       $data.innerHTML = '';
@@ -237,8 +347,12 @@ function renderPagination() {
   const container = document.getElementById('paginationContainer');
   if (!container) return;
 
-  // 新增记录按钮
-  let html = `<button type="button" class="btn-primary" id="addRecordBtn" style="height:32px;padding:0 16px;margin-right:auto;">+ 新增</button>`;
+  // 按钮区域：新增 + 批量删除 + 全表删除
+  let html = `<div class="action-buttons">`;
+  html += `<button type="button" class="btn-primary" id="addRecordBtn">+ 新增</button>`;
+  html += `<button type="button" class="btn-warning" id="batchDeleteBtn" disabled>批量删除</button>`;
+  html += `<button type="button" class="btn-danger" id="truncateTableBtn" disabled>全表删除</button>`;
+  html += `</div>`;
 
   if (totalPages > 1) {
     // 生成分页按钮
@@ -414,3 +528,21 @@ document.getElementById('sqliteBtn').addEventListener('click', () => {
 
 // 确保事件处理器已绑定
 ensurePaginationHandler();
+
+// 监听选中行变化，更新批量删除按钮状态
+window.addEventListener('tableSelectionChange', () => {
+  const selectedIds = getSelectedIds();
+  const batchBtn = document.getElementById('batchDeleteBtn');
+  if (batchBtn) {
+    batchBtn.disabled = selectedIds.length === 0;
+    batchBtn.textContent = selectedIds.length > 0 ? `批量删除 (${selectedIds.length})` : '批量删除';
+  }
+});
+
+// 页面有数据时启用全表删除按钮
+window.addEventListener('dataLoaded', () => {
+  const truncateBtn = document.getElementById('truncateTableBtn');
+  if (truncateBtn && state.pagination.total > 0) {
+    truncateBtn.disabled = false;
+  }
+});

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SQLite 数据库查看器</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='3' y='3' width='18' height='18' rx='2' fill='%234f6ef7'/><path d='M3 15l5-5 4 4 5-5 4 4' stroke='white' stroke-width='2' fill='none'/></svg>">
+  <script type="module" crossorigin src="/assets/sqlite-DxV6Tzwp.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/ThemeToggle-Dsn7mdR_.js">
+  <link rel="stylesheet" crossorigin href="/assets/ThemeToggle-CI3pOEBg.css">
+  <link rel="stylesheet" crossorigin href="/assets/sqlite-B-dgZybh.css">
+</head>
+<body>
+  <div class="container">
+    <!-- 页面顶部导航 -->
+    <div class="page-header">
+      <div class="page-title">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <path d="M3 15l5-5 4 4 5-5 4 4"/>
+        </svg>
+        <h1>SQLite 数据库查看器</h1>
+      </div>
+      <div class="page-actions">
+        <button id="themeToggle" class="btn-secondary" style="height:32px;padding:0 16px;border-radius:20px;" title="切换主题">浅色</button>
+        <button id="backBtn" class="btn-secondary" style="height:32px;padding:0 16px;border-radius:20px;">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+          返回主页
+        </button>
+      </div>
+    </div>
+
+    <!-- 消息提示 -->
+    <div id="message" class="message" style="display:none;"></div>
+
+    <!-- 连接区域 -->
+    <div class="card" id="connectionSection">
+      <h3 style="margin-bottom:16px;">选择数据库文件</h3>
+      <div id="sqliteDropZone" class="sqlite-drop-zone">
+        <div class="drop-zone-icon">
+          <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="12" y1="18" x2="12" y2="12"/>
+            <line x1="9" y1="15" x2="15" y2="15"/>
+          </svg>
+        </div>
+        <div class="drop-zone-text">将 .db / .sqlite / .sqlite3 文件拖拽到此处</div>
+        <div class="drop-zone-hint">或点击选择文件</div>
+      </div>
+      <div id="fileNameDisplay" class="sqlite-file-name"></div>
+    </div>
+
+    <!-- 表选择区域 -->
+    <div class="card" id="tableSection" style="display:none;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+        <label style="font-weight:600;font-size:14px;">选择数据表</label>
+        <select id="tableSelect" style="flex:1;height:36px;padding:0 10px;border:1px solid var(--border);border-radius:6px;font-size:14px;">
+          <option value="">请选择表</option>
+        </select>
+        <button type="button" class="btn-primary" id="queryBtn" disabled>查询</button>
+      </div>
+    </div>
+
+    <!-- 数据展示区域 -->
+    <div class="card" id="dataSection" style="display:none;">
+      <div id="dataInfo" class="data-info"></div>
+      <div id="dataContainer" style="max-height:500px;overflow:auto;border:1px solid var(--border);border-radius:6px;"></div>
+      <div id="paginationContainer" style="margin-top:12px;"></div>
+    </div>
+
+    <!-- 隐藏文件输入 -->
+    <input type="file" id="fileInput" accept=".db,.sqlite,.sqlite3" style="display:none;">
+  </div>
+
+</body>
+</html>
