@@ -32,9 +32,15 @@ function buildTable(container, fields, data, config, callbacks = {}) {
   const isWideTable = effectiveFields.length > 5;
   let tableHtml = `<div class="table-wrapper"><table>`;
 
+  // 通过 col 标签精确控制前两列宽度（选择列、操作列）
+  tableHtml += `<colgroup>
+    <col class="col-select">
+    <col class="col-action">
+  </colgroup>`;
+
   // 表头 - 选择列 + 操作列
   tableHtml += '<tr>';
-  tableHtml += '<th class="action-column"><input type="checkbox" id="selectAllRows" title="全选"></th>';
+  tableHtml += '<th class="select-column"><input type="checkbox" id="selectAllRows" title="全选"></th>';
   tableHtml += '<th class="action-column">操作</th>';
   effectiveFields.forEach(field => {
     const sortClass = field === currentSortField ? currentSortOrder.toLowerCase() : '';
@@ -50,7 +56,7 @@ function buildTable(container, fields, data, config, callbacks = {}) {
     tableHtml += '<tr>';
     // 复选框
     const recordId = row.id ?? row.ID ?? row.Id ?? index + 1;
-    tableHtml += `<td class="action-cell"><input type="checkbox" class="row-checkbox" data-id="${recordId}"></td>`;
+    tableHtml += `<td class="select-cell"><input type="checkbox" class="row-checkbox" data-id="${recordId}"></td>`;
     // 操作按钮
     const recordName = row.name ?? row.title ?? row.username ?? `#${recordId}`;
     const recordData = encodeURIComponent(JSON.stringify(row));

@@ -46,7 +46,10 @@
       "Bash(playwright-cli localstorage-set:*)",
       "Bash(playwright-cli select:*)",
       "Bash(grep:*)",
-      "Bash(pkill -f \"vite\")"
+      "Bash(pkill -f \"vite\")",
+      "Bash(playwright-cli screenshot:*)",
+      "Bash(playwright-cli close:*)",
+      "Bash(playwright-cli open:*)"
     ]
   }
 }
