@@ -490,11 +490,6 @@ document.getElementById('authBtn').addEventListener('click', () => {
   }
 });
 
-// SQLite 按钮：打开独立页面
-document.getElementById('sqliteBtn').addEventListener('click', () => {
-  window.open('/src/sqlite.html', '_blank', 'width=1200,height=800');
-});
-
 // ============================================================
 // 页面加载时自动恢复状态
 // ============================================================

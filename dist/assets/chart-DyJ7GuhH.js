@@ -1,4 +1,4 @@
-import{t as e}from"./ThemeToggle-Dsn7mdR_.js";import{n as t,o as n,t as r}from"./ConnectionForm-B1TnuhdO.js";import{n as i,t as a}from"./chart-6Dgdad7Y.js";a.register(...i);var o=null,s=`bar`;function c(e,t={}){l(e)}function l(e){e.innerHTML=`
+import{t as e}from"./ThemeToggle-Dsn7mdR_.js";import{n as t,o as n,t as r}from"./ConnectionForm-evP68P2t.js";import{n as i,t as a}from"./chart-6Dgdad7Y.js";a.register(...i);var o=null,s=`bar`;function c(e,t={}){l(e)}function l(e){e.innerHTML=`
     <div class="chart-view">
       <!-- 左侧字段面板 -->
       <div class="chart-field-panel">
