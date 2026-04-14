@@ -1,4 +1,4 @@
-import{t as e}from"./ThemeToggle-Dsn7mdR_.js";import{i as t,n,t as r}from"./ConnectionForm-evP68P2t.js";var i={onQuery:()=>{}},a=null,o=null;function s(e,r){i={...i,...r},e.innerHTML=`
+import{t as e}from"./ThemeToggle-Dsn7mdR_.js";import{i as t,n,t as r}from"./ConnectionForm-DjDGUJl_.js";var i={onQuery:()=>{}},a=null,o=null;function s(e,r){i={...i,...r},e.innerHTML=`
     <div class="table-selector" id="tableSection">
       <label>选择数据表</label>
       <select id="toolbarTableSelect">

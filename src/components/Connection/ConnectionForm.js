@@ -7,7 +7,6 @@ import { saveConfig, loadConfig } from '../../utils/storage.js';
 
 let elements = {};
 let onTablesLoaded = null;
-let currentDbType = 'mysql';
 
 /**
  * 初始化连接表单
@@ -17,25 +16,6 @@ function init(container, callbacks = {}) {
 
   container.innerHTML = `
     <div class="connection-form">
-      <!-- 数据库类型切换 Tab -->
-      <div class="db-type-tabs">
-        <button type="button" class="tab-btn active" data-type="mysql">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-            <ellipse cx="12" cy="5" rx="9" ry="3"/>
-            <path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/>
-            <path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/>
-          </svg>
-          MySQL
-        </button>
-        <button type="button" class="tab-btn" data-type="sqlite">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="3" width="18" height="18" rx="2"/>
-            <path d="M3 15l5-5 4 4 5-5 4 4"/>
-          </svg>
-          SQLite
-        </button>
-      </div>
-
       <!-- MySQL 表单 -->
       <div class="mysql-fields" id="mysqlFields">
         <div class="form-group">
@@ -75,7 +55,7 @@ function init(container, callbacks = {}) {
           </div>
           <div id="sqliteFileName" class="sqlite-file-name"></div>
         </div>
-        <!-- SQLite 拖拽区域（点击或拖放文件） -->
+        <!-- SQLite 拖拽区域 -->
         <div class="sqlite-drop-zone" id="sqliteDropZone" style="margin-top:8px;">
           <div style="font-size:13px;color:var(--text-muted);">
             将 .db / .sqlite / .sqlite3 文件拖拽到此处
@@ -105,6 +85,7 @@ function init(container, callbacks = {}) {
     password: document.getElementById('password'),
     database: document.getElementById('database'),
     getDbBtn: document.getElementById('getDbBtn'),
+    mysqlFields: document.getElementById('mysqlFields'),
     sqliteFields: document.getElementById('sqliteFields'),
     sqlitePath: document.getElementById('sqlitePath'),
     sqliteBrowseBtn: document.getElementById('sqliteBrowseBtn'),
@@ -117,7 +98,7 @@ function init(container, callbacks = {}) {
     message: document.getElementById('message')
   };
 
-  // 读取保存的数据库类型
+  // 初始化数据库类型
   const savedType = localStorage.getItem('dbType') || 'mysql';
   switchDbType(savedType);
 
@@ -129,26 +110,16 @@ function init(container, callbacks = {}) {
 // 数据库类型切换
 // ============================================================
 function switchDbType(type) {
-  currentDbType = type;
   localStorage.setItem('dbType', type);
 
-  // 切换 Tab 高亮
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.type === type);
-  });
-
   // 切换表单显示
-  document.getElementById('mysqlFields').style.display = type === 'mysql' ? 'flex' : 'none';
+  elements.mysqlFields.style.display = type === 'mysql' ? 'flex' : 'none';
   elements.sqliteFields.style.display = type === 'sqlite' ? 'flex' : 'none';
 
-  // 清空另一个表单的状态
+  // 更新连接按钮状态
   if (type === 'mysql') {
-    elements.sqlitePath.value = '';
-    elements.sqliteFileName.textContent = '';
     elements.connectBtn.disabled = !elements.database.value;
   } else {
-    elements.database.selectedIndex = 0;
-    elements.database.disabled = true;
     elements.connectBtn.disabled = !elements.sqlitePath.value;
   }
 }
@@ -157,10 +128,11 @@ function switchDbType(type) {
 // 事件绑定
 // ============================================================
 function bindEvents() {
-  // Tab 切换
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => switchDbType(btn.dataset.type));
-  });
+  // 数据库类型切换
+  const dbTypeSelect = document.getElementById('dbTypeSelect');
+  if (dbTypeSelect) {
+    dbTypeSelect.addEventListener('change', (e) => switchDbType(e.target.value));
+  }
 
   // MySQL 事件
   elements.getDbBtn.addEventListener('click', handleGetDatabases);
@@ -290,7 +262,8 @@ async function handleGetDatabases() {
 // 连接数据库
 // ============================================================
 async function handleConnect() {
-  if (currentDbType === 'mysql') {
+  const dbType = localStorage.getItem('dbType') || 'mysql';
+  if (dbType === 'mysql') {
     await handleMysqlConnect();
   } else {
     await handleSqliteConnect();

@@ -49,7 +49,16 @@
       "Bash(pkill -f \"vite\")",
       "Bash(playwright-cli screenshot:*)",
       "Bash(playwright-cli close:*)",
-      "Bash(playwright-cli open:*)"
+      "Bash(playwright-cli open:*)",
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(rm -rf node_modules/.vite dist)",
+      "Bash(findstr /i \"node python\")",
+      "Bash(findstr \"node python\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173)",
+      "Bash(findstr \":3000 :5173 :9000 \")",
+      "Bash(findstr \"LISTENING\")",
+      "Bash(powershell:*)"
     ]
   }
 }

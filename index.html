@@ -8,8 +8,11 @@
 <body>
   <div class="container">
     <h1 style="display:flex;align-items:center;gap:12px;">
-      MySQL 数据库查看器
-      <button id="sqliteBtn" style="height:32px;padding:0 16px;border-radius:20px;border:none;background:#c0a062;color:#fff;font-size:12px;font-weight:600;cursor:pointer;" title="打开 SQLite 数据库查看器">SQLite</button>
+      <select id="dbTypeSelect" style="height:32px;padding:0 12px;border-radius:20px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;">
+        <option value="mysql" selected>MySQL 数据库</option>
+        <option value="sqlite">SQLite 数据库</option>
+      </select>
+
       <button id="themeToggle" style="height:32px;padding:0 16px;border-radius:20px;border:none;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(102,126,234,0.4);" title="切换主题">浅色</button>
       <button id="authBtn" style="height:32px;padding:0 16px;border-radius:20px;border:none;background:var(--primary);color:#fff;font-size:12px;font-weight:600;cursor:pointer;" title="管理员登录">登录</button>
       <div id="viewModeContainer" style="margin-left:auto;"></div>
