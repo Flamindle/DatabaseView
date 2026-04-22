@@ -10,12 +10,18 @@ const API_BASE = 'http://localhost:3000';
  */
 async function request(url, options = {}) {
   try {
+    const body = options.body;
+    // 普通对象统一 JSON 序列化；FormData 不处理（让它自己编码）
+    const processedBody = (body && typeof body === 'object' && !(body instanceof FormData))
+      ? JSON.stringify(body)
+      : body;
     const response = await fetch(url, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
         ...options.headers
-      }
+      },
+      body: processedBody
     });
     return await response.json();
   } catch (error) {

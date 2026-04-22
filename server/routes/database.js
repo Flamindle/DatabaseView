@@ -67,7 +67,7 @@ router.post('/connect', async (req, res) => {
       await sqliteDb.openDb(dbPath);
       const tables = await sqliteDb.getTables();
       const tableList = tables.map(r => r.name);
-      console.log(`SQLite 连接成功：${dbPath}`);
+      console.log(`SQLite 连接成功：${dbPath}，表列表：`, tableList);
 
       res.json({
         success: true,

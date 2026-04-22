@@ -20,6 +20,7 @@ MySQL / SQLite 数据库查看工具，逐步演化为轻量级 BI 工具（类 
 
 ## 常用命令
 
+
 ```bash
 # Node.js + 前端
 npm install       # 安装依赖
@@ -296,6 +297,64 @@ CREATE TABLE `auth_user` (
     `is_active` TINYINT(1) DEFAULT 1,
     `date_joined` DATETIME NOT NULL
 );
+```
+
+---
+
+## 开发环境热更新说明
+
+### 可以实时更新（无需重启）
+
+**前端源码**（`src/` 目录）配合 Vite 开发服务器：
+- ✅ `.js`、`.css` 文件修改 → 毫秒级热更新（HMR），页面不刷新
+- ✅ 组件逻辑、样式变化 → 立即生效
+- ✅ 运行 `npm run dev` 或 `npm run dev:all` 时自动启用
+
+### 需要重启服务
+
+**Node.js 后端**（`server/` 目录）：
+- ❌ `server/index.js`、`server/db/*.js`、`server/routes/*.js` 修改
+- 原因：Express 服务器需要重新加载代码
+- 解决：重启 `npm start` 或 `npm run dev`
+
+**Django 后端**（`django_api/` 目录）：
+- ❌ `django_api/` 下的 `.py` 文件修改
+- 原因：Django 开发服务器需要重新加载
+- 解决：重启 `python manage.py runserver 9000`
+- 注：Django 开发模式下会自动检测文件变化并重载
+
+**生产构建**（`dist/` 目录）：
+- ❌ 修改源码后需要重新构建
+- 解决：运行 `npm run build`
+
+### 完全重启开发环境
+
+如果遇到端口占用或服务异常，可以完全重启：
+
+```bash
+# 1. 停止所有 Node.js 和 Python 进程
+taskkill /F /IM node.exe
+taskkill /F /IM python.exe
+
+# 2. 等待 2-3 秒确保端口释放
+
+# 3. 重新启动所有服务
+npm run dev:all
+```
+
+### 工作原理
+
+```
+开发模式（npm run dev:all）：
+┌─────────────────────────────────────────────┐
+│  Vite (5173)     ← src/ 源码（HMR 热更新）    │
+│    │                                          │
+│    └── 代理 → Node.js (3000) ← server/（需重启）│
+│              └── 代理 → Django (9000) ← django_api/（需重启）│
+└─────────────────────────────────────────────┘
+
+生产模式（npm start）：
+  Node.js (3000) 读取 dist/ 静态文件（需重新 build）
 ```
 
 ---

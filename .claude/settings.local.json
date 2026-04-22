@@ -58,7 +58,8 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173)",
       "Bash(findstr \":3000 :5173 :9000 \")",
       "Bash(findstr \"LISTENING\")",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(node *)"
     ]
   }
 }
